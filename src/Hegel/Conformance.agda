@@ -111,6 +111,13 @@ postulate
 {-# COMPILE GHC lookupEnvVar = \k -> fmap (fmap T.pack) (lookupEnv (T.unpack k)) #-}
 {-# COMPILE GHC isInfixOf′ = \needle haystack -> T.isInfixOf needle haystack #-}
 
+-- | Extract codepoints from a raw CBOR text value, correctly handling
+-- WTF-8 surrogates (which Data.Text would replace with U+FFFD).
+postulate
+  valueToCodepoints : Hegel.FFI.Value → Maybe (List ℕ)
+
+{-# COMPILE GHC valueToCodepoints = \v -> fmap (map (fromIntegral . ord)) (H.termToText v) #-}
+
 -- ============================================================================
 -- Pure Agda helper functions
 -- ============================================================================
