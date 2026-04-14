@@ -18,7 +18,15 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ## Installation
 
-Add hegel-java to your `pom.xml`:
+hegel-java is not yet published to Maven Central. Install it locally first:
+
+```bash
+git clone https://github.com/hegeldev/hegel-java.git
+cd hegel-java
+mvn install -DskipTests -q
+```
+
+Then add it to your `pom.xml`:
 
 ```xml
 <dependency>

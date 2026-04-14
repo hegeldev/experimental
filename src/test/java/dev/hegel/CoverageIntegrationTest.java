@@ -519,6 +519,17 @@ class CoverageIntegrationTest {
         });
   }
 
+  @Test
+  void charactersGenerator() {
+    Hegel.test(
+        "characters",
+        Settings.builder().testCases(20).build(),
+        tc -> {
+          String c = tc.draw(characters());
+          assertEquals(1, c.codePointCount(0, c.length()), "Expected single codepoint: " + c);
+        });
+  }
+
   // -----------------------------------------------------------------------
   // Settings configurations
   // -----------------------------------------------------------------------

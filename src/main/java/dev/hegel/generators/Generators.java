@@ -302,6 +302,93 @@ public final class Generators {
   }
 
   // -----------------------------------------------------------------------
+  // Characters
+  // -----------------------------------------------------------------------
+
+  /** Generate single Unicode characters (as one-codepoint strings). */
+  public static CharactersGenerator characters() {
+    return new CharactersGenerator();
+  }
+
+  /** Builder for single-character generators. */
+  public static final class CharactersGenerator implements Generator<String> {
+    private String codec;
+    private Integer minCodepoint;
+    private Integer maxCodepoint;
+    private String includeCharacters;
+    private String excludeCharacters;
+
+    private CharactersGenerator() {}
+
+    private CharactersGenerator(CharactersGenerator other) {
+      this.codec = other.codec;
+      this.minCodepoint = other.minCodepoint;
+      this.maxCodepoint = other.maxCodepoint;
+      this.includeCharacters = other.includeCharacters;
+      this.excludeCharacters = other.excludeCharacters;
+    }
+
+    /** Restrict to characters encodable in this codec (e.g. {@code "ascii"}). */
+    public CharactersGenerator codec(String codec) {
+      CharactersGenerator g = new CharactersGenerator(this);
+      g.codec = codec;
+      return g;
+    }
+
+    /** Set the minimum Unicode codepoint (inclusive). */
+    public CharactersGenerator minCodepoint(int min) {
+      CharactersGenerator g = new CharactersGenerator(this);
+      g.minCodepoint = min;
+      return g;
+    }
+
+    /** Set the maximum Unicode codepoint (inclusive). */
+    public CharactersGenerator maxCodepoint(int max) {
+      CharactersGenerator g = new CharactersGenerator(this);
+      g.maxCodepoint = max;
+      return g;
+    }
+
+    /** Always include these specific characters. */
+    public CharactersGenerator includeCharacters(String chars) {
+      CharactersGenerator g = new CharactersGenerator(this);
+      g.includeCharacters = chars;
+      return g;
+    }
+
+    /** Always exclude these specific characters. */
+    public CharactersGenerator excludeCharacters(String chars) {
+      CharactersGenerator g = new CharactersGenerator(this);
+      g.excludeCharacters = chars;
+      return g;
+    }
+
+    private ObjectNode buildSchema() {
+      ObjectNode schema = Cbor.map();
+      schema.put("type", "string");
+      schema.put("min_size", 1);
+      schema.put("max_size", 1);
+      if (codec != null) schema.put("codec", codec);
+      if (minCodepoint != null) schema.put("min_codepoint", minCodepoint);
+      if (maxCodepoint != null) schema.put("max_codepoint", maxCodepoint);
+      if (includeCharacters != null) schema.put("include_characters", includeCharacters);
+      if (excludeCharacters != null) schema.put("exclude_characters", excludeCharacters);
+      return schema;
+    }
+
+    @Override
+    public String generate(TestCase tc) {
+      return asBasic().orElseThrow().generate(tc);
+    }
+
+    @Override
+    public Optional<BasicGenerator<String>> asBasic() {
+      ObjectNode schema = buildSchema();
+      return Optional.of(new BasicGenerator<>(schema, Generators::nodeToText));
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Binary
   // -----------------------------------------------------------------------
 

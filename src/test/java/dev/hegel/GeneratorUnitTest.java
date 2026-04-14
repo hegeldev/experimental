@@ -691,4 +691,33 @@ class GeneratorUnitTest {
     Object[] result = tc.draw(tuples());
     assertEquals(0, result.length);
   }
+
+  // -----------------------------------------------------------------------
+  // CharactersGenerator (Generators.java)
+  // -----------------------------------------------------------------------
+
+  @Test
+  void charactersDefault() {
+    // Default characters() returns a single-char string
+    MockDataSource ds = new MockDataSource().withResponse(TextNode.valueOf("a"));
+    TestCase tc = tc(ds);
+    String result = tc.draw(characters());
+    assertEquals("a", result);
+  }
+
+  @Test
+  void charactersWithOptions() {
+    // Builder methods: codec, minCodepoint, maxCodepoint, include/excludeCharacters
+    MockDataSource ds = new MockDataSource().withResponse(TextNode.valueOf("z"));
+    TestCase tc = tc(ds);
+    String result =
+        tc.draw(
+            characters()
+                .codec("ascii")
+                .minCodepoint(65)
+                .maxCodepoint(122)
+                .includeCharacters("_")
+                .excludeCharacters("@"));
+    assertEquals("z", result);
+  }
 }

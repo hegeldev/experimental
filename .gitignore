@@ -10,4 +10,5 @@ target/
 .project
 bin/
 .hypothesis/
+.pytest_cache/
 .claude/
