@@ -210,7 +210,7 @@ Hegel.test("more thorough test", s, tc -> {
 
 The default is 100. Increase for properties that need wider coverage; decrease if they are slow.
 
-## Getting Started
+## API Reference
 
 ### Drawing values
 
@@ -237,6 +237,7 @@ List<Long>        xs1 = tc.draw(lists(integers()));
 List<Long>        xs2 = tc.draw(lists(integers(0, 10)).minSize(1).maxSize(5));
 Set<Long>         s   = tc.draw(sets(integers(0, 100)));         // unique elements
 Map<Long, String> m   = tc.draw(maps(integers(), text()));
+Object[]          t   = tc.draw(tuples(integers(), text(), booleans())); // fixed-length tuple
 Long              opt = tc.draw(optional(integers()));           // null or Long
 Long              x1  = tc.draw(sampledFrom(1L, 2L, 3L));
 Long              x2  = tc.draw(oneOf(integers(0, 5), integers(100, 200)));
@@ -307,6 +308,28 @@ new Hegel(tc -> {
 .settings(Settings.builder().testCases(200).build())
 .databaseKey("my_property_v2")
 .run();
+```
+
+## Test Utilities
+
+`HegelTestUtils` provides helpers for asserting properties of generators themselves — useful when writing tests for code that uses Hegel:
+
+```java
+import dev.hegel.HegelTestUtils;
+import static dev.hegel.generators.Generators.*;
+
+// Assert every generated value satisfies a predicate
+HegelTestUtils.assertAllExamples(integers(0, 100), n -> n >= 0 && n <= 100);
+
+// Assert no generated value satisfies a predicate
+HegelTestUtils.assertNoExamples(integers(0, 10), n -> n < 0);
+
+// Find any value satisfying a predicate (returns it, or throws if none found)
+long found = HegelTestUtils.findAny(integers(-100, 100), n -> n > 50);
+
+// Find the minimal value satisfying a predicate (via shrinking)
+long minimal = HegelTestUtils.minimal(integers(0, 1000), n -> n > 42);
+// minimal == 43
 ```
 
 ## Development
