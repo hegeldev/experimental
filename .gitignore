@@ -13,6 +13,16 @@ MAlonzo/
 *.dyn_hi
 *.dyn_o
 
+# Hegel server data
+.hegel/
+
+# Hypothesis database
+.hypothesis/
+
+# Python cache
+__pycache__/
+.pytest_cache/
+
 # GHC environment (local to machine)
 .ghc.environment.*
 
