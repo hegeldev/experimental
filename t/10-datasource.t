@@ -205,4 +205,124 @@ subtest 'TestCase print_draws with hash' => sub {
     like($output, qr/a => 1/, "hash printed");
 };
 
+# --- Exercise print_draws with undef ---
+subtest 'print_draws with undef value' => sub {
+    my $ds = FakeDataSource->new(generate_values => [undef]);
+    my $tc = Hegel::TestCase->new(data_source => $ds, is_final => 1);
+    my $gen = Hegel::BasicGenerator->new(schema => { type => 'integer' });
+    $tc->draw($gen);
+
+    my $output = '';
+    { local *STDERR; open STDERR, '>', \$output; $tc->print_draws(); }
+    like($output, qr/undef/, "undef value printed");
+};
+
+# --- Exercise print_draws with nested hash/array ---
+subtest 'print_draws with nested structures' => sub {
+    my $ds = FakeDataSource->new(generate_values => [{a => [1, undef]}]);
+    my $tc = Hegel::TestCase->new(data_source => $ds, is_final => 1);
+    my $gen = Hegel::BasicGenerator->new(schema => { type => 'dict' });
+    $tc->draw($gen);
+
+    my $output = '';
+    { local *STDERR; open STDERR, '>', \$output; $tc->print_draws(); }
+    like($output, qr/a =>/, "nested hash printed");
+};
+
+# --- Exercise print_notes when not final (no output) ---
+subtest 'print_notes not final' => sub {
+    my $ds = FakeDataSource->new();
+    my $tc = Hegel::TestCase->new(data_source => $ds, is_final => 0);
+    $tc->note("should not print");
+    my $output = '';
+    { local *STDERR; open STDERR, '>', \$output; $tc->print_notes(); }
+    is($output, '', "no output when not final");
+};
+
+# --- Exercise print_draws when not final (no output) ---
+subtest 'print_draws not final' => sub {
+    my $ds = FakeDataSource->new(generate_values => [42]);
+    my $tc = Hegel::TestCase->new(data_source => $ds, is_final => 0);
+    my $gen = Hegel::BasicGenerator->new(schema => { type => 'integer' });
+    $tc->draw($gen);
+    my $output = '';
+    { local *STDERR; open STDERR, '>', \$output; $tc->print_draws(); }
+    is($output, '', "no output when not final");
+};
+
+# --- Exercise draw recording at span_depth > 0 (no recording) ---
+subtest 'draw at span_depth > 0 not recorded' => sub {
+    my $ds = FakeDataSource->new(generate_values => [1, 2]);
+    my $tc = Hegel::TestCase->new(data_source => $ds, is_final => 1);
+    $tc->start_span(1);  # depth = 1
+    my $gen = Hegel::BasicGenerator->new(schema => { type => 'integer' });
+    $tc->draw($gen);  # not recorded (depth > 0)
+    $tc->stop_span(0);
+    # Only draws at depth=0 are recorded
+    my $output = '';
+    { local *STDERR; open STDERR, '>', \$output; $tc->print_draws(); }
+    is($output, '', "no draws recorded at depth > 0");
+};
+
+# --- Exercise ServerDataSource _check_error: UnsatisfiedAssumption ---
+subtest 'ServerDataSource UnsatisfiedAssumption error' => sub {
+    use Hegel::DataSource;
+    no warnings 'redefine';
+    local *Hegel::Stream::request_cbor = sub {
+        return { error => "test", type => "UnsatisfiedAssumption" };
+    };
+    local *Hegel::Stream::close_stream = sub { };
+    my $mock_stream = bless { closed => 0 }, 'Hegel::Stream';
+    my $ds = Hegel::ServerDataSource->new(stream => $mock_stream);
+    throws_ok { $ds->generate({ type => 'integer' }) }
+        qr/Hegel::UnsatisfiedAssumption/, "UnsatisfiedAssumption propagated";
+};
+
+# --- Exercise ServerDataSource _check_error: generic error ---
+subtest 'ServerDataSource generic error' => sub {
+    use Hegel::DataSource;
+    no warnings 'redefine';
+    local *Hegel::Stream::request_cbor = sub {
+        return { error => "something bad", type => "InvalidArgument" };
+    };
+    local *Hegel::Stream::close_stream = sub { };
+    my $mock_stream = bless { closed => 0 }, 'Hegel::Stream';
+    my $ds = Hegel::ServerDataSource->new(stream => $mock_stream);
+    throws_ok { $ds->generate({ type => 'integer' }) }
+        qr/Hegel::UnsatisfiedAssumption/, "generic error becomes UnsatisfiedAssumption";
+};
+
+# --- Exercise ServerDataSource stop_span when aborted ---
+subtest 'ServerDataSource stop_span when aborted' => sub {
+    use Hegel::DataSource;
+    my $ds = bless { stream => undef, aborted => 1 }, 'Hegel::ServerDataSource';
+    # stop_span should be a no-op when aborted
+    $ds->stop_span(0);
+    pass("stop_span silently returns when aborted");
+};
+
+# --- Exercise ServerDataSource mark_complete when aborted ---
+subtest 'ServerDataSource mark_complete when aborted' => sub {
+    use Hegel::DataSource;
+    my $ds = bless { stream => undef, aborted => 1 }, 'Hegel::ServerDataSource';
+    $ds->mark_complete("VALID", "TEST");
+    pass("mark_complete silently returns when aborted");
+};
+
+# --- Exercise ServerDataSource collection_reject when aborted ---
+subtest 'ServerDataSource collection_reject when aborted' => sub {
+    use Hegel::DataSource;
+    my $ds = bless { stream => undef, aborted => 1 }, 'Hegel::ServerDataSource';
+    $ds->collection_reject(0, "test");
+    pass("collection_reject silently returns when aborted");
+};
+
+# --- Exercise assume with true condition (no-op) ---
+subtest 'assume true is no-op' => sub {
+    my $ds = FakeDataSource->new();
+    my $tc = Hegel::TestCase->new(data_source => $ds);
+    $tc->assume(1);  # should not throw
+    pass("assume(true) is no-op");
+};
+
 done_testing;

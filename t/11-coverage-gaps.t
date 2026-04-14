@@ -173,10 +173,22 @@ subtest 'protocol invalid terminator' => sub {
 subtest 'protocol connection closed' => sub {
     use Hegel::Protocol qw(read_packet);
     pipe(my $rd, my $wr) or die;
-    # Write only 5 bytes (not enough for header)
-    syswrite($wr, "HEGL");
-    close $wr;  # close immediately
-    throws_ok { read_packet($rd) } qr/Connection closed|Read error/;
+    # Write partial header then close
+    syswrite($wr, pack("N", Hegel::Protocol::MAGIC));  # only 4 of 20 header bytes
+    close $wr;
+    throws_ok { read_packet($rd) } qr/Connection closed/;
+    close $rd;
+};
+
+# --- Connection: read_packet_for_stream with read failure ---
+subtest 'connection read failure' => sub {
+    use Hegel::Connection;
+    pipe(my $rd, my $wr) or die;
+    $wr->autoflush(1);
+    my $conn = Hegel::Connection->new(reader => $rd, writer => $wr);
+    my $stream = $conn->control_stream();
+    close $wr;  # close write end to cause EOF on read
+    throws_ok { $conn->read_packet_for_stream(0) } qr/Connection|read|closed/i;
     close $rd;
 };
 

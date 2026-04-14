@@ -28,10 +28,6 @@ sub as_basic {
 
 sub map {
     my ($self, $fn) = @_;
-    my $basic = $self->as_basic();
-    if ($basic) {
-        return $basic->map($fn);
-    }
     return Hegel::MappedGenerator->new(source => $self, fn => $fn);
 }
 
