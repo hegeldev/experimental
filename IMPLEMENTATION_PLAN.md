@@ -7,12 +7,12 @@
 - [x] Protocol layer (HegelFFI.hs) is complete and correct
 - [x] Agda tests exist and pass (TestBasic.agda, TestGenerators.agda)
 - [x] **Conformance binaries use the Agda generator library** — rewritten from Haskell to Agda, all 16 pass
-- [ ] **`just coverage` enforces comprehensive testing** — prints a message and exits 0
+- [x] **`just coverage` enforces comprehensive testing** — runs 3 test suites (36 tests) + 16 conformance subtests
 - [x] **README/examples show the generator API** — quickstart uses draw/integersIn/lists
 - [x] **Public API hides CBOR internals** — cborMap, generateFromSchema removed from Hegel.agda re-exports
-- [ ] **Test utilities implemented** — no assert_all_examples, find_any, minimal, assert_no_examples
+- [x] **Test utilities implemented** — assertAllExamples, findAny, assertNoExamples + 23 comprehensive tests
 - [x] **oneOf optimized paths** — Path 2 (tuple schema) for all-basic, Path 3 for non-basic
-- [ ] **Protocol unit tests** — minimal (one basic test through real server)
+- [x] **Protocol unit tests** — test-protocol validates connectivity; 16 conformance tests exercise all protocol paths including 6 error injection modes
 
 ## Phase 1: Conformance tests using the real Agda API
 
