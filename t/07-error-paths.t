@@ -74,6 +74,21 @@ subtest 'stream is_closed' => sub {
     close $wr; close $rd;
 };
 
+# Test health check failure (filter_too_much)
+subtest 'health check filter_too_much' => sub {
+    my $runner = Hegel::Runner->new(
+        test_fn => sub {
+            my ($tc) = @_;
+            my $x = $tc->draw(integers(min_value => 0, max_value => 1000000));
+            $tc->assume($x == 42);  # rejects 99.999% of inputs
+        },
+        settings => { test_cases => 100 },
+    );
+    my $result = $runner->run();
+    ok(!$result->{passed}, "health check failure detected");
+    ok(defined $result->{error_message}, "has error message: " . ($result->{error_message} // ''));
+};
+
 # Test with seed and suppress_health_check settings
 subtest 'seed and suppress_health_check' => sub {
     my $runner = Hegel::Runner->new(

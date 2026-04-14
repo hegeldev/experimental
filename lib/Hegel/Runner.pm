@@ -75,7 +75,8 @@ sub run {
                 $passed = 0;
             }
             if ($results->{health_check_failure}) {
-                $error_message = "Health check failure: " . join(', ', @{$results->{health_check_failure}});
+                my $hcf = $results->{health_check_failure};
+                $error_message = "Health check failure: " . (ref $hcf eq 'ARRAY' ? join(', ', @$hcf) : $hcf);
                 $passed = 0;
             }
             if ($results->{flaky}) {
