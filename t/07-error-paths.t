@@ -74,4 +74,17 @@ subtest 'stream is_closed' => sub {
     close $wr; close $rd;
 };
 
+# Test with seed and suppress_health_check settings
+subtest 'seed and suppress_health_check' => sub {
+    my $runner = Hegel::Runner->new(
+        test_fn => sub {
+            my ($tc) = @_;
+            $tc->draw(integers(min_value => 0, max_value => 10));
+        },
+        settings => { test_cases => 3, seed => 42, suppress_health_check => ['too_slow'] },
+    );
+    my $result = $runner->run();
+    ok($result->{passed}, "passes with seed + suppress_health_check");
+};
+
 done_testing;
