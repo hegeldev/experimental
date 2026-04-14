@@ -26,6 +26,22 @@ sub get {
     return $_session;
 }
 
+# Create a fresh session (bypasses singleton). Caller is responsible for cleanup.
+sub new_session {
+    my ($class) = @_;
+    return $class->_init();
+}
+
+# Reset the singleton (for testing with different HEGEL_PROTOCOL_TEST_MODE).
+sub reset {
+    my ($class) = @_;
+    if ($_session) {
+        local $?;
+        eval { $_session->DESTROY() };
+        $_session = undef;
+    }
+}
+
 sub _init {
     my ($class) = @_;
 

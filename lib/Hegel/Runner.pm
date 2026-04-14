@@ -6,6 +6,7 @@ use Carp qw(croak);
 use Types::Serialiser;
 use Hegel::Session;
 use Hegel::TestCase;
+use Hegel::DataSource;
 use Hegel::Protocol qw(cbor_encode cbor_decode);
 
 sub new {
@@ -93,9 +94,10 @@ sub run {
 
                     my $tc_stream_id = $replay_event->{stream_id};
                     my $tc_stream = $connection->connect_stream($tc_stream_id);
+                    my $ds = Hegel::ServerDataSource->new(stream => $tc_stream);
                     my $tc = Hegel::TestCase->new(
-                        stream   => $tc_stream,
-                        is_final => 1,
+                        data_source => $ds,
+                        is_final    => 1,
                     );
 
                     eval { $self->{test_fn}->($tc) };
@@ -126,9 +128,10 @@ sub run {
             my $tc_stream_id = $event->{stream_id};
             my $is_final = $event->{is_final} ? 1 : 0;
             my $tc_stream = $connection->connect_stream($tc_stream_id);
+            my $ds = Hegel::ServerDataSource->new(stream => $tc_stream);
             my $tc = Hegel::TestCase->new(
-                stream   => $tc_stream,
-                is_final => $is_final,
+                data_source => $ds,
+                is_final    => $is_final,
             );
 
             # Run the test function
