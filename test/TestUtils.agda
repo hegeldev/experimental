@@ -10,7 +10,7 @@ open import Data.String.Base using (String; _++_)
 open import Data.Unit.Base using (⊤; tt)
 open import IO.Primitive.Core as Prim using (IO; _>>=_; pure)
 
-open import Hegel.FFI using (TestCase; Pair; pair; assume; runHegelTest; runHegelTests)
+open import Hegel.FFI using (TestCase; Pair; pair; assume; runHegelTest; runHegelTestQuiet; runHegelTests)
 open import Hegel.Generator using (Generator; draw)
 
 {-# FOREIGN GHC
@@ -75,7 +75,7 @@ assertAllExamples gen pred =
 
 findAny : {A : Set} → Generator A → (A → Bool) → Prim.IO Bool
 findAny gen cond =
-  runHegelTest "findAny" (λ tc →
+  runHegelTestQuiet "findAny" (λ tc →
     draw tc gen Prim.>>= λ a →
     condFail tc (cond a))
   Prim.>>= λ passed →
@@ -101,7 +101,7 @@ assertNoExamples gen cond =
 minimal : {A : Set} → Generator A → (A → Bool) → Prim.IO (Maybe A)
 minimal {A} gen cond =
   newIORef nothing Prim.>>= λ ref →
-  runHegelTest "minimal" (λ tc →
+  runHegelTestQuiet "minimal" (λ tc →
     draw tc gen Prim.>>= λ a →
     maybeStore ref a (cond a) Prim.>>= λ _ →
     condFail tc (cond a))

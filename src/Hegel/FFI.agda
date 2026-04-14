@@ -132,8 +132,10 @@ postulate
 -- ============================================================================
 
 postulate
-  runHegelTest  : String → (TestCase → Prim.IO ⊤) → Prim.IO Bool
-  runHegelTests : List (Pair String (TestCase → Prim.IO ⊤)) → Prim.IO Bool
+  runHegelTest      : String → (TestCase → Prim.IO ⊤) → Prim.IO Bool
+  runHegelTestQuiet : String → (TestCase → Prim.IO ⊤) → Prim.IO Bool
+  runHegelTests     : List (Pair String (TestCase → Prim.IO ⊤)) → Prim.IO Bool
 
-{-# COMPILE GHC runHegelTest  = \name fn -> H.runHegelTest H.defaultSettings (unpack name) fn #-}
-{-# COMPILE GHC runHegelTests = \tests -> H.runHegelTests H.defaultSettings (map (\(n, f) -> (unpack n, f)) tests) #-}
+{-# COMPILE GHC runHegelTest      = \name fn -> H.runHegelTest H.defaultSettings (unpack name) fn #-}
+{-# COMPILE GHC runHegelTestQuiet = \name fn -> H.runHegelTest (H.defaultSettings { H.sVerbosity = H.Quiet }) (unpack name) fn #-}
+{-# COMPILE GHC runHegelTests     = \tests -> H.runHegelTests H.defaultSettings (map (\(n, f) -> (unpack n, f)) tests) #-}

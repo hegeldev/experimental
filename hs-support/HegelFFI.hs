@@ -4,7 +4,7 @@
 
 module HegelFFI
   ( TestCase(..), Connection, Stream, Packet(..)
-  , Settings(..), TestResult(..), Status(..)
+  , Settings(..), TestResult(..), Status(..), Verbosity(..)
   , DataSource(..)
   , withHegelConnection, spawnServer, performHandshake
   , runTest
@@ -386,12 +386,13 @@ closeConnection conn = do
   mapM_ killThread tid
 
 -- Server management
-spawnServer :: IO (Handle, Handle, ProcessHandle)
-spawnServer = do
+spawnServer :: Verbosity -> IO (Handle, Handle, ProcessHandle)
+spawnServer verbosity = do
   cmdOverride <- lookupEnv "HEGEL_SERVER_COMMAND"
-  let (cmd, args) = case cmdOverride of
-        Just c  -> (head (words c), tail (words c) ++ ["--stdio"])
-        Nothing -> ("python3", ["-m", "hegel", "--stdio"])
+  let vFlag = verbosityToString verbosity
+      (cmd, args) = case cmdOverride of
+        Just c  -> (head (words c), tail (words c) ++ ["--stdio", "--verbosity", vFlag])
+        Nothing -> ("python3", ["-m", "hegel", "--stdio", "--verbosity", vFlag])
   (Just si, Just so, _, ph) <- createProcess (proc cmd args)
     { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
   hSetBinaryMode si True
@@ -525,17 +526,27 @@ data TestCase = TestCase
   , tcIsFinal    :: !(IORef Bool)
   }
 
+-- Verbosity levels
+data Verbosity = Quiet | Normal | Verbose | Debug deriving (Show, Eq, Ord)
+
+verbosityToString :: Verbosity -> String
+verbosityToString Quiet   = "quiet"
+verbosityToString Normal  = "normal"
+verbosityToString Verbose = "verbose"
+verbosityToString Debug   = "debug"
+
 -- Settings
 data Settings = Settings
-  { sTestCases   :: !Int
-  , sSeed        :: !(Maybe Int)
-  , sDerandomize :: !Bool
-  , sDatabase    :: !(Maybe String)
-  , sVerbosity   :: !String
+  { sTestCases          :: !Int
+  , sSeed               :: !(Maybe Int)
+  , sDerandomize        :: !Bool
+  , sDatabase           :: !(Maybe String)  -- Nothing = "unset", Just "" = disabled
+  , sVerbosity          :: !Verbosity
+  , sSuppressHealthCheck :: ![String]
   }
 
 defaultSettings :: Settings
-defaultSettings = Settings 100 Nothing False Nothing "normal"
+defaultSettings = Settings 100 Nothing False Nothing Normal []
 
 -- Test result
 data Status = Valid | Invalid | Interesting deriving (Show, Eq)
@@ -585,8 +596,8 @@ hegelTarget tc = dsTarget (tcDataSource tc)
 
 -- Test runner
 withHegelConnection :: Settings -> (Connection -> Stream -> IO a) -> IO a
-withHegelConnection _settings action = do
-  (serverIn, serverOut, ph) <- spawnServer
+withHegelConnection settings action = do
+  (serverIn, serverOut, ph) <- spawnServer (sVerbosity settings)
   conn <- newConnection serverOut serverIn
   performHandshake conn
   cs <- newStream conn 0
@@ -599,14 +610,22 @@ runTest :: Connection -> Stream -> Settings -> String
         -> (TestCase -> IO ()) -> IO TestResult
 runTest conn cs settings _testName testFn = do
   ts <- connNewStream conn
-  let msg = CBOR.TMap
+  let dbField = case sDatabase settings of
+                  Nothing -> [(CBOR.TString "database", CBOR.TNull)]  -- unset
+                  Just "" -> [(CBOR.TString "database", CBOR.TNull)]  -- disabled
+                  Just db -> [(CBOR.TString "database_key",
+                               CBOR.TBytes (BS.pack (map (fromIntegral . fromEnum) db)))]
+      shcField = case sSuppressHealthCheck settings of
+                   [] -> []
+                   hcs -> [(CBOR.TString "suppress_health_check",
+                            CBOR.TList (map (CBOR.TString . T.pack) hcs))]
+      msg = CBOR.TMap $
         [ (CBOR.TString "command",      CBOR.TString "run_test")
         , (CBOR.TString "test_cases",   CBOR.TInt (sTestCases settings))
         , (CBOR.TString "seed",         maybe CBOR.TNull CBOR.TInt (sSeed settings))
         , (CBOR.TString "stream_id",    CBOR.TInt (fromIntegral (strmId ts)))
-        , (CBOR.TString "database_key", CBOR.TNull)
         , (CBOR.TString "derandomize",  CBOR.TBool (sDerandomize settings))
-        ]
+        ] ++ dbField ++ shcField
   _ <- requestCbor cs msg
   processEvents conn ts testFn
 
@@ -659,13 +678,14 @@ runHegelTest :: Settings -> String -> (TestCase -> IO ()) -> IO Bool
 runHegelTest settings name testFn =
   withHegelConnection settings $ \conn cs -> do
     result <- runTest conn cs settings name testFn
+    let loud = sVerbosity settings >= Normal
     case trError result of
       Just err -> do
-        putStrLn $ "FAIL: " ++ name ++ ": " ++ err
+        when loud $ putStrLn $ "FAIL: " ++ name ++ ": " ++ err
         pure False
       Nothing | trPassed result -> pure True
               | otherwise -> do
-                  putStrLn $ "FAIL: " ++ name
+                  when loud $ putStrLn $ "FAIL: " ++ name
                   pure False
 
 -- | Run multiple named Hegel tests. Returns True if all passed.
@@ -674,15 +694,16 @@ runHegelTests settings tests =
   withHegelConnection settings $ \conn cs -> do
     results <- mapM (\(name, fn) -> do
       result <- runTest conn cs settings name fn
+      let loud = sVerbosity settings >= Normal
       case trError result of
         Just err -> do
-          putStrLn $ "FAIL: " ++ name ++ ": " ++ err
+          when loud $ putStrLn $ "FAIL: " ++ name ++ ": " ++ err
           pure False
         Nothing | trPassed result -> do
-                    putStrLn $ "PASS: " ++ name
+                    when loud $ putStrLn $ "PASS: " ++ name
                     pure True
                 | otherwise -> do
-                    putStrLn $ "FAIL: " ++ name
+                    when loud $ putStrLn $ "FAIL: " ++ name
                     pure False
       ) tests
     pure (and results)
