@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use JSON::XS qw(decode_json encode_json);
+use JSON::PP qw(decode_json encode_json);
 
 use Hegel::Runner;
 use Hegel::Generators::Primitives qw(sampled_from);
