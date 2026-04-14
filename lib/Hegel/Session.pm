@@ -124,14 +124,26 @@ sub _parse_version {
 sub DESTROY {
     my ($self) = @_;
     return unless $self->{pid};
-    eval {
-        $self->{connection}->close() if $self->{connection};
-    };
-    eval {
-        kill 'TERM', $self->{pid};
-        waitpid($self->{pid}, 0);
-    };
+    my $pid = $self->{pid};
     $self->{pid} = undef;
+
+    eval { $self->{connection}->close() if $self->{connection} };
+
+    # Kill and reap with timeout
+    kill 'TERM', $pid;
+    # Non-blocking wait with timeout
+    my $waited = 0;
+    for (1..10) {
+        my $reaped = waitpid($pid, 1);  # WNOHANG
+        last if $reaped > 0 || $reaped == -1;
+        select(undef, undef, undef, 0.1);
+        $waited += 0.1;
+    }
+    # Force kill if still alive
+    if ($waited >= 1.0) {
+        kill 'KILL', $pid;
+        waitpid($pid, 0);
+    }
 }
 
 # Also clean up on program exit

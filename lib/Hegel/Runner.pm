@@ -29,10 +29,10 @@ sub run {
     my $settings = $self->{settings};
     my $run_test = {
         command    => 'run_test',
-        stream_id  => $test_stream->stream_id(),
-        test_cases => $settings->{test_cases} || 100,
+        stream_id  => $test_stream->stream_id() + 0,
+        test_cases => ($settings->{test_cases} || 100) + 0,
     };
-    $run_test->{seed} = $settings->{seed} if defined $settings->{seed};
+    $run_test->{seed} = $settings->{seed} + 0 if defined $settings->{seed};
     $run_test->{derandomize} = ($settings->{derandomize} ? \1 : \0)
         if defined $settings->{derandomize};
     if (defined $settings->{database}) {
