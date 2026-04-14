@@ -121,29 +121,29 @@ Long              x2  = tc.draw(oneOf(integers(0, 5), integers(100, 200)));
 ### Format generators
 
 ```java
-String   email = tc.draw(emails());
-String   url   = tc.draw(urls());
-String   ip4   = tc.draw(ipv4Addresses());
-String   ip6   = tc.draw(ipv6Addresses());
-String   date  = tc.draw(dates());
-String   time  = tc.draw(times());
-String   dt    = tc.draw(datetimes());
-String   s     = tc.draw(fromRegex("[a-z]{3,8}"));
-String   c     = tc.draw(characters());              // single Unicode character
-Duration d     = tc.draw(durations().maxValue(Duration.ofSeconds(60)));
+String            email = tc.draw(emails());
+String            url   = tc.draw(urls());
+String            ip4   = tc.draw(ipv4Addresses());
+String            ip6   = tc.draw(ipv6Addresses());
+String            date  = tc.draw(dates());           // ISO 8601, e.g. "2024-03-15"
+String            time  = tc.draw(times());
+String            dt    = tc.draw(datetimes());
+String            s     = tc.draw(fromRegex("[a-z]{3,8}"));
+String            c     = tc.draw(characters());      // single Unicode character
+java.time.Duration d    = tc.draw(durations().maxValue(java.time.Duration.ofSeconds(60)));
 ```
 
 ### Combinators
 
 ```java
 // map: transform a generated value (basic generators stay basic)
-Generator<String> gen = integers(0, 100).map(n -> "item-" + n);
+Generator<String> labeled = integers(0, 100).map(n -> "item-" + n);
 
 // filter: constrain generated values (uses assume() under the hood)
-Generator<Long> pos = integers(-100, 100).filter(n -> n > 0);
+Generator<Long> positive = integers(-100, 100).filter(n -> n > 0);
 
 // flatMap: generate a value that depends on a previously drawn value
-Generator<String> gen = integers(1, 10).flatMap(n ->
+Generator<String> sameLength = integers(1, 10).flatMap(n ->
     text().minSize(n.intValue()).maxSize(n.intValue())
 );
 ```
@@ -160,11 +160,11 @@ tc.target((double) x, "x"); // guide Hegel toward larger values of x
 
 ```java
 Settings s = Settings.builder()
-    .testCases(500)               // number of test cases (default: 100)
-    .seed(42L)                    // deterministic seed
-    .derandomize(true)            // replay known examples only (auto-enabled in CI)
-    .database("/tmp/mydb")        // example database path
-    .database("")                 // "" to disable the database
+    .testCases(500)                    // number of test cases (default: 100)
+    .seed(42L)                         // deterministic seed
+    .derandomize(true)                 // replay known examples only (auto-enabled in CI)
+    .database("/tmp/mydb")             // example database path (null = default location)
+    // .database("")                   // pass "" to disable the database entirely
     .suppressHealthCheck("too_slow")
     .build();
 
