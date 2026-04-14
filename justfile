@@ -9,8 +9,8 @@ test:
 
 # Run conformance tests
 conformance:
-    timeout 240 uv run --with 'hegel-core==0.4.1' --with pytest --with hypothesis --with pytest-subtests --with pytest-timeout \
-        pytest conformance/tests/test_conformance.py -v --timeout=60 || true
+    uv run --with 'hegel-core==0.4.1' --with pytest --with hypothesis --with pytest-subtests \
+        pytest conformance/tests/test_conformance.py -v
 
 # Run tests with coverage
 coverage:
