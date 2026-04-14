@@ -82,6 +82,16 @@ subtest 'bad version from fake server' => sub {
     delete $ENV{HEGEL_SERVER_COMMAND};
 };
 
+# --- Bad handshake response ---
+subtest 'bad handshake response' => sub {
+    use FindBin qw($RealBin);
+    local $ENV{HEGEL_SERVER_COMMAND} = "perl -I lib $RealBin/fake_bad_handshake.pl";
+    Hegel::Session->reset();
+    throws_ok { Hegel::Session->get() } qr/Bad handshake/i;
+    Hegel::Session->reset();
+    delete $ENV{HEGEL_SERVER_COMMAND};
+};
+
 # Restore normal session
 delete $ENV{HEGEL_SERVER_COMMAND};
 delete $ENV{HEGEL_PROTOCOL_TEST_MODE};

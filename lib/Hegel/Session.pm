@@ -49,7 +49,7 @@ sub _init {
     my $server_cmd = $ENV{HEGEL_SERVER_COMMAND};
     my @cmd;
     if ($server_cmd) {
-        @cmd = ($server_cmd, '--stdio', '--verbosity', 'normal');
+        @cmd = (split(/\s+/, $server_cmd), '--stdio', '--verbosity', 'normal');
     } else {
         @cmd = ('uv', 'tool', 'run', '--from',
                 'hegel-core==' . HEGEL_SERVER_VERSION,
