@@ -26,12 +26,19 @@ public final class Cbor {
 
     private static final ObjectMapper MAPPER = new ObjectMapper(new CBORFactory());
 
+    /** Package-private: override mapper for testing error paths (null = use default). */
+    static ObjectMapper testMapper = null;
+
+    private static ObjectMapper getMapper() {
+        return testMapper != null ? testMapper : MAPPER;
+    }
+
     private Cbor() {}
 
     /** Encode a {@link JsonNode} to CBOR bytes. */
     public static byte[] encode(JsonNode value) {
         try {
-            return MAPPER.writeValueAsBytes(value);
+            return getMapper().writeValueAsBytes(value);
         } catch (JsonProcessingException e) {
             throw new HegelProtocolException("CBOR encode failed", e);
         }
@@ -40,7 +47,7 @@ public final class Cbor {
     /** Decode CBOR bytes to a {@link JsonNode}. */
     public static JsonNode decode(byte[] data) {
         try {
-            return MAPPER.readTree(data);
+            return getMapper().readTree(data);
         } catch (IOException e) {
             throw new HegelProtocolException("CBOR decode failed: " + e.getMessage(), e);
         }
@@ -51,7 +58,7 @@ public final class Cbor {
     // -----------------------------------------------------------------------
 
     public static ObjectMapper mapper() {
-        return MAPPER;
+        return getMapper();
     }
 
     public static ObjectNode map() {

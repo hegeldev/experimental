@@ -33,4 +33,9 @@ public interface DataSource {
 
     /** Returns true if a previous request was aborted (StopTest). */
     boolean testAborted();
+
+    /** Provide an optimization target hint to the engine (fire-and-forget). */
+    default void target(double value, String label) {
+        // Optional optimization hint; default is a no-op.
+    }
 }

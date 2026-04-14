@@ -120,7 +120,20 @@ public final class Settings {
     // CI detection
     // -----------------------------------------------------------------------
 
-    private static boolean isInCI() {
+    /** Package-private: override CI detection for tests without env vars. */
+    static Boolean testCiOverride = null;
+
+    static boolean isInCI() {
+        if (testCiOverride != null) return testCiOverride;
+        return isInCIFromEnv();
+    }
+
+    private static boolean isInCIFromEnv() {
+        return isInCIFromEnv(System::getenv);
+    }
+
+    /** Package-private for testing with an injectable env-lookup. */
+    static boolean isInCIFromEnv(java.util.function.Function<String, String> getenv) {
         String[] ciVars = {
             "CI", "BITBUCKET_COMMIT", "BUILDKITE", "CIRCLECI",
             "CIRRUS_CI", "CODEBUILD_BUILD_ID", "GITHUB_ACTIONS",
@@ -128,7 +141,7 @@ public final class Settings {
             "TF_BUILD"
         };
         for (String var : ciVars) {
-            if (System.getenv(var) != null) return true;
+            if (getenv.apply(var) != null) return true;
         }
         return false;
     }

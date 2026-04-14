@@ -159,16 +159,24 @@ public class ServerDataSource implements DataSource {
         } catch (Exception e) {
             // Ignore errors during mark_complete
         } finally {
-            try {
-                stream.close();
-            } catch (IOException e) {
-                // ignore
-            }
+            stream.close();
         }
     }
 
     @Override
     public boolean testAborted() {
         return aborted;
+    }
+
+    @Override
+    public void target(double value, String label) {
+        ObjectNode extra = Cbor.map();
+        extra.put("label", label);
+        extra.put("value", value);
+        try {
+            sendRequest("target", extra);
+        } catch (StopTestException e) {
+            // target is an optional optimization hint; swallow errors
+        }
     }
 }

@@ -38,6 +38,9 @@ public class Stream {
     private int nextMessageId = 1;
     private boolean closed = false;
 
+    /** Package-private: configurable timeout for tests (default 30s). */
+    static long pollTimeoutSeconds = 30;
+
     static final Object SERVER_EXITED = new Object();
 
     Stream(int streamId, Connection connection) {
@@ -131,7 +134,7 @@ public class Stream {
 
     private Packet readOnePacket() throws IOException {
         try {
-            Object item = inbox.poll(30, TimeUnit.SECONDS);
+            Object item = inbox.poll(pollTimeoutSeconds, TimeUnit.SECONDS);
             if (item == null) {
                 throw new IOException("Timeout waiting for response from hegel-core");
             }
@@ -153,7 +156,7 @@ public class Stream {
     }
 
     /** Close the stream and send the close packet to the server. */
-    public void close() throws IOException {
+    public void close() {
         if (closed) return;
         markClosed();
         connection.unregisterStream(streamId);

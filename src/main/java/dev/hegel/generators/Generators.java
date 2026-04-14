@@ -1,7 +1,7 @@
 package dev.hegel.generators;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.BinaryNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.hegel.BasicGenerator;
 import dev.hegel.Generator;
@@ -252,11 +252,7 @@ public final class Generators {
                 if (node.isTextual()) return node.textValue();
                 // Handle WTF-8 / binary node that might be returned for strings
                 if (node.isBinary()) {
-                    try {
-                        return new String(node.binaryValue(), java.nio.charset.StandardCharsets.UTF_8);
-                    } catch (Exception e) {
-                        return node.asText();
-                    }
+                    return new String(((BinaryNode) node).binaryValue(), java.nio.charset.StandardCharsets.UTF_8);
                 }
                 return node.asText();
             }));
@@ -304,11 +300,7 @@ public final class Generators {
             ObjectNode schema = buildSchema();
             return Optional.of(new BasicGenerator<>(schema, node -> {
                 if (node.isBinary()) {
-                    try {
-                        return node.binaryValue();
-                    } catch (Exception e) {
-                        return new byte[0];
-                    }
+                    return ((BinaryNode) node).binaryValue();
                 }
                 // Fallback: treat textual nodes as UTF-8 bytes
                 if (node.isTextual()) {
@@ -326,11 +318,14 @@ public final class Generators {
     /**
      * Always generate the same constant value.
      *
-     * <p>Basic: schema is {@code {"constant": null}}, transform always returns the value.
+     * <p>Uses an integer 0..0 schema; the server value is ignored and the
+     * fixed Java value is always returned.
      */
     public static <T> Generator<T> just(T value) {
         ObjectNode schema = Cbor.map();
-        schema.putNull("constant");
+        schema.put("type", "integer");
+        schema.put("min_value", 0);
+        schema.put("max_value", 0);
         return new BasicGenerator<>(schema, node -> value);
     }
 
@@ -547,63 +542,11 @@ public final class Generators {
         return oneOf(Arrays.asList(gens));
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> Generator<T> oneOf(List<Generator<T>> gens) {
         if (gens.isEmpty()) throw new IllegalArgumentException("oneOf: no generators provided");
         if (gens.size() == 1) return gens.get(0);
 
-        // Check if all generators are basic
-        List<BasicGenerator<T>> basics = new ArrayList<>();
-        boolean allBasic = true;
-        for (Generator<T> g : gens) {
-            Optional<BasicGenerator<T>> b = g.asBasic();
-            if (b.isPresent()) {
-                basics.add(b.get());
-            } else {
-                allBasic = false;
-                break;
-            }
-        }
-
-        if (allBasic) {
-            // Check if any have transforms
-            boolean anyTransforms = basics.stream().anyMatch(b -> {
-                // Check if transform is identity by introspection isn't possible,
-                // so we use the tagged tuple approach for all basic oneOf
-                return true;
-            });
-
-            // Use tagged tuples approach: {one_of: [{type: tuple, elements: [{constant: 0}, schema1]}, ...]}
-            ArrayNode oneOfArr = Cbor.array();
-            List<Function<JsonNode, T>> transforms = new ArrayList<>();
-
-            for (int i = 0; i < basics.size(); i++) {
-                BasicGenerator<T> b = basics.get(i);
-                ObjectNode tupleSchema = Cbor.map();
-                tupleSchema.put("type", "tuple");
-                ArrayNode elements = Cbor.array();
-                ObjectNode tagSchema = Cbor.map();
-                tagSchema.put("constant", i);
-                elements.add(tagSchema);
-                elements.add(b.schema());
-                tupleSchema.set("elements", elements);
-                oneOfArr.add(tupleSchema);
-                transforms.add(b.transform());
-            }
-
-            ObjectNode schema = Cbor.map();
-            schema.set("one_of", oneOfArr);
-
-            List<Function<JsonNode, T>> finalTransforms = transforms;
-            return new BasicGenerator<>(schema, node -> {
-                // node is [tag, value]
-                int tag = node.get(0).intValue();
-                JsonNode value = node.get(1);
-                return finalTransforms.get(tag).apply(value);
-            });
-        }
-
-        // Non-basic: generate an index, then delegate
+        // Generate an integer index, then delegate to the chosen generator.
         List<Generator<T>> gensCopy = List.copyOf(gens);
         Generator<Long> indexGen = integers(0, gens.size() - 1);
         return tc -> {
@@ -633,39 +576,52 @@ public final class Generators {
     // Format generators
     // -----------------------------------------------------------------------
 
+    /**
+     * Convert a CBOR text-like node to a Java String.
+     * The hegel-core server may return strings as CBOR binary strings (WTF-8/tag 91).
+     * Jackson decodes these as {@code BinaryNode}, so we must handle that case explicitly.
+     */
+    static String nodeToText(JsonNode node) {
+        if (node.isTextual()) return node.textValue();
+        if (node.isBinary()) {
+            return new String(((BinaryNode) node).binaryValue(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        return node.asText();
+    }
+
     /** Generate email addresses. */
     public static Generator<String> emails() {
         ObjectNode schema = Cbor.map();
         schema.put("type", "email");
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 
     /** Generate URLs. */
     public static Generator<String> urls() {
         ObjectNode schema = Cbor.map();
         schema.put("type", "url");
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 
     /** Generate domain names. */
     public static Generator<String> domains() {
         ObjectNode schema = Cbor.map();
         schema.put("type", "domain");
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 
     /** Generate IPv4 addresses as strings. */
     public static Generator<String> ipv4Addresses() {
         ObjectNode schema = Cbor.map();
         schema.put("type", "ipv4");
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 
     /** Generate IPv6 addresses as strings. */
     public static Generator<String> ipv6Addresses() {
         ObjectNode schema = Cbor.map();
         schema.put("type", "ipv6");
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 
     /** Generate IPv4 or IPv6 addresses. */
@@ -677,21 +633,21 @@ public final class Generators {
     public static Generator<String> dates() {
         ObjectNode schema = Cbor.map();
         schema.put("type", "date");
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 
     /** Generate times in ISO 8601 format. */
     public static Generator<String> times() {
         ObjectNode schema = Cbor.map();
         schema.put("type", "time");
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 
     /** Generate datetimes in ISO 8601 format. */
     public static Generator<String> datetimes() {
         ObjectNode schema = Cbor.map();
         schema.put("type", "datetime");
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 
     /** Generate strings matching the given regular expression. */
@@ -705,6 +661,6 @@ public final class Generators {
         schema.put("type", "regex");
         schema.put("pattern", pattern);
         schema.put("fullmatch", fullmatch);
-        return new BasicGenerator<>(schema, JsonNode::asText);
+        return new BasicGenerator<>(schema, Generators::nodeToText);
     }
 }

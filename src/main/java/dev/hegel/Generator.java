@@ -81,8 +81,7 @@ public interface Generator<T> {
                 }
                 tc.stopSpan(true);
             }
-            tc.assume(false);
-            throw new AssertionError("unreachable");
+            throw new AssumeException();
         };
     }
 

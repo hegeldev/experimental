@@ -75,19 +75,7 @@ public class TestCase {
      * @param label a descriptive label for this metric
      */
     public void target(double value, String label) {
-        try {
-            dev.hegel.protocol.Cbor.map(); // ensure no static init issues
-            com.fasterxml.jackson.databind.node.ObjectNode msg = dev.hegel.protocol.Cbor.map();
-            msg.put("command", "target");
-            msg.put("value", value);
-            msg.put("label", label);
-            byte[] encoded = dev.hegel.protocol.Cbor.encode(msg);
-            // target() is fire-and-forget per the protocol spec; we do need a reply
-            // but we can reuse the underlying stream mechanism via DataSource
-            // For now we send via the generate fallback path
-        } catch (Exception e) {
-            // ignore target errors
-        }
+        dataSource.target(value, label);
     }
 
     // -----------------------------------------------------------------------

@@ -33,6 +33,9 @@ public class Hegel {
     private Settings settings = Settings.defaults();
     private String databaseKey = null;
 
+    /** Package-private: inject a session for testing (bypasses singleton). */
+    static volatile Session testSession = null;
+
     public Hegel(Consumer<TestCase> testFn) {
         this.testFn = testFn;
     }
@@ -90,7 +93,7 @@ public class Hegel {
      * if any test case finds a counterexample.
      */
     public void run() {
-        Session session = Session.get();
+        Session session = testSession != null ? testSession : Session.get();
         Connection connection = session.connection();
         Stream controlStream = session.controlStream();
 
@@ -126,9 +129,7 @@ public class Hegel {
                 }
             }
 
-            try {
-                testStream.close();
-            } catch (IOException ignored) {}
+            testStream.close();
 
             // Check final results
             checkResults(resultData, lastFailure);
@@ -245,7 +246,7 @@ public class Hegel {
         return result;
     }
 
-    private void checkResults(JsonNode resultData, AssertionError lastFailure) {
+    void checkResults(JsonNode resultData, AssertionError lastFailure) {
         if (resultData.has("error") && !resultData.get("error").isNull()) {
             throw new RuntimeException("Server error: " + resultData.get("error"));
         }
@@ -272,7 +273,7 @@ public class Hegel {
         return new AssertionError(e.getMessage(), e);
     }
 
-    private static String extractOrigin(Throwable e) {
+    static String extractOrigin(Throwable e) {
         if (e == null || e.getStackTrace() == null) return null;
         for (StackTraceElement ste : e.getStackTrace()) {
             String cls = ste.getClassName();

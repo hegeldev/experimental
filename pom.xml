@@ -102,6 +102,10 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
+                            <excludes>
+                                <!-- Conformance binaries run as separate processes -->
+                                <exclude>dev/hegel/conformance/**</exclude>
+                            </excludes>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
@@ -112,9 +116,6 @@
                                             <minimum>1.00</minimum>
                                         </limit>
                                     </limits>
-                                    <excludes>
-                                        <exclude>dev.hegel.conformance.*</exclude>
-                                    </excludes>
                                 </rule>
                             </rules>
                         </configuration>

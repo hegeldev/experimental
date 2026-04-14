@@ -1,6 +1,7 @@
 package dev.hegel;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.BinaryNode;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -96,11 +97,7 @@ public class BasicGenerator<T> implements Generator<T> {
         if (node.isFloatingPointNumber()) return node.doubleValue();
         if (node.isTextual()) return node.textValue();
         if (node.isBinary()) {
-            try {
-                return node.binaryValue();
-            } catch (Exception e) {
-                return node.textValue();
-            }
+            return ((BinaryNode) node).binaryValue();
         }
         if (node.isArray()) {
             java.util.List<Object> list = new java.util.ArrayList<>();
