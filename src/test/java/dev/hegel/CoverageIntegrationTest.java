@@ -3,6 +3,7 @@ package dev.hegel;
 import static dev.hegel.generators.Generators.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -586,15 +587,16 @@ class CoverageIntegrationTest {
   // -----------------------------------------------------------------------
 
   @Test
-  void settingsWithSeed() {
-    // Running with a seed should be deterministic
-    Hegel.test(
-        "with seed",
-        Settings.builder().testCases(10).seed(42L).build(),
-        tc -> {
-          long x = tc.draw(integers());
-          // Just verify we get values without error
-        });
+  void settingsWithSeedIsDeterministic() {
+    // The same seed must produce the same sequence of drawn values across runs
+    Settings s = Settings.builder().testCases(5).seed(42L).build();
+    List<Long> firstRun = new ArrayList<>();
+    Hegel.test("seed-determinism", s, tc -> firstRun.add(tc.draw(integers(0, 1_000_000))));
+    List<Long> secondRun = new ArrayList<>();
+    Hegel.test("seed-determinism", s, tc -> secondRun.add(tc.draw(integers(0, 1_000_000))));
+    assertEquals(firstRun, secondRun, "Same seed must produce identical values");
+    assertFalse(firstRun.isEmpty(), "Seeded run should produce at least one test case");
+    for (long v : firstRun) assertTrue(v >= 0 && v <= 1_000_000);
   }
 
   @Test
@@ -610,11 +612,14 @@ class CoverageIntegrationTest {
 
   @Test
   void settingsWithDerandomize() {
+    // Derandomize replays known examples only; with an empty database this runs 0 cases.
+    // The main assertion is that these settings are accepted by the server without error.
     Hegel.test(
         "derandomize",
         Settings.builder().testCases(10).derandomize(true).build(),
         tc -> {
-          long x = tc.draw(integers());
+          long x = tc.draw(integers(0, 100));
+          assertTrue(x >= 0 && x <= 100);
         });
   }
 
@@ -624,7 +629,8 @@ class CoverageIntegrationTest {
         "suppress health check",
         Settings.builder().testCases(10).suppressHealthCheck("too_slow").build(),
         tc -> {
-          long x = tc.draw(integers());
+          long x = tc.draw(integers(0, 100));
+          assertTrue(x >= 0 && x <= 100);
         });
   }
 
