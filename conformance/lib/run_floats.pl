@@ -30,15 +30,16 @@ my $runner = Hegel::Runner->new(
     test_fn => sub {
         my ($tc) = @_;
         my $val = $tc->draw($gen);
-        my %metrics;
+        my $line;
         if (isnan($val)) {
-            $metrics{is_nan} = \1;
+            $line = '{"is_nan":true}';
         } elsif (isinf($val)) {
-            $metrics{is_infinite} = \1;
+            $line = '{"is_infinite":true}';
         } else {
-            $metrics{value} = $val + 0.0;
+            # Use %.17g for full float64 precision (JSON::XS loses precision)
+            $line = sprintf '{"value":%.17g}', $val;
         }
-        print $metrics_fh encode_json(\%metrics) . "\n";
+        print $metrics_fh "$line\n";
     },
     settings => { test_cases => $test_cases },
 );
