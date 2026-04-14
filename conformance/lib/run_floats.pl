@@ -17,9 +17,9 @@ open(my $metrics_fh, '>', $metrics_file) or die "Cannot open $metrics_file: $!";
 my %gen_args;
 $gen_args{min_value} = $params->{min_value} + 0.0 if defined $params->{min_value};
 $gen_args{max_value} = $params->{max_value} + 0.0 if defined $params->{max_value};
-# exclude_min/exclude_max are booleans; only set when true
-$gen_args{exclude_min} = 1 if $params->{exclude_min};
-$gen_args{exclude_max} = 1 if $params->{exclude_max};
+# Always pass exclude_min/exclude_max (matching Rust behavior)
+$gen_args{exclude_min} = $params->{exclude_min} ? 1 : 0;
+$gen_args{exclude_max} = $params->{exclude_max} ? 1 : 0;
 # allow_nan and allow_infinity are ternary: true, false, or null (omit)
 $gen_args{allow_nan} = $params->{allow_nan} if defined $params->{allow_nan};
 $gen_args{allow_infinity} = $params->{allow_infinity} if defined $params->{allow_infinity};
