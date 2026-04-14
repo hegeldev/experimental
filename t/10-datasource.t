@@ -317,6 +317,23 @@ subtest 'ServerDataSource collection_reject when aborted' => sub {
     pass("collection_reject silently returns when aborted");
 };
 
+# --- StopTest message accessor ---
+subtest 'StopTest message accessor' => sub {
+    my $err = Hegel::StopTest->new("test message");
+    is($err->message, "test message", "message accessor works");
+};
+
+# --- _dump_value for non-ref scalars ---
+subtest 'dump_value plain scalar' => sub {
+    my $ds = FakeDataSource->new(generate_values => ["hello"]);
+    my $tc = Hegel::TestCase->new(data_source => $ds, is_final => 1);
+    my $gen = Hegel::BasicGenerator->new(schema => { type => 'string' });
+    $tc->draw($gen);
+    my $output = '';
+    { local *STDERR; open STDERR, '>', \$output; $tc->print_draws(); }
+    like($output, qr/hello/, "plain string printed");
+};
+
 # --- Exercise assume with true condition (no-op) ---
 subtest 'assume true is no-op' => sub {
     my $ds = FakeDataSource->new();

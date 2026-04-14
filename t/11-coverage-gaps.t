@@ -205,4 +205,24 @@ subtest 'connection read failure' => sub {
     close $rd;
 };
 
+# --- TestUtils: assert_all_examples failure ---
+subtest 'assert_all_examples fails' => sub {
+    use Hegel::TestUtils qw(assert_all_examples);
+    throws_ok {
+        assert_all_examples(
+            integers(min_value => 0, max_value => 100),
+            sub { $_[0] < 5 },  # will fail for values >= 5
+            test_cases => 50,
+        );
+    } qr/predicate failed/, "assert_all_examples detects failure";
+};
+
+# --- TestUtils: minimal no match ---
+subtest 'minimal dies when no match' => sub {
+    use Hegel::TestUtils qw(minimal);
+    throws_ok {
+        minimal(just(0), sub { $_[0] > 100 }, test_cases => 5);
+    } qr/no example/i, "minimal dies when no match";
+};
+
 done_testing;
