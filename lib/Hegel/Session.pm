@@ -149,6 +149,7 @@ sub DESTROY {
 # Also clean up on program exit
 END {
     if ($_session) {
+        local $?;  # Don't let child exit status contaminate our exit code
         eval { $_session->DESTROY() };
         $_session = undef;
     }

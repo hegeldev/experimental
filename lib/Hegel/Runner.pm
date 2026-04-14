@@ -80,9 +80,9 @@ sub run {
             }
 
             # Handle final replay of interesting test cases
-            my $interesting = $results->{interesting_test_cases};
-            if ($interesting && @$interesting) {
-                for my $tc_info (@$interesting) {
+            my $interesting_count = $results->{interesting_test_cases} || 0;
+            for my $i (1 .. $interesting_count) {
+                {
                     my ($replay_msg_id, $replay_bytes) = $test_stream->receive_request();
                     my $replay_event = cbor_decode($replay_bytes);
                     # Acknowledge
