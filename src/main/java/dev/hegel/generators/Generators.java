@@ -439,6 +439,30 @@ public final class Generators {
     }
 
     // -----------------------------------------------------------------------
+    // Tuples
+    // -----------------------------------------------------------------------
+
+    /**
+     * Generate fixed-length tuples. Each element is drawn from the corresponding generator.
+     * Returns an {@code Object[]} with one entry per input generator.
+     *
+     * <pre>{@code
+     * Object[] pair = tc.draw(tuples(integers(0, 10), text()));
+     * long n  = (long)   pair[0];
+     * String s = (String) pair[1];
+     * }</pre>
+     */
+    public static Generator<Object[]> tuples(Generator<?>... gens) {
+        return tc -> {
+            Object[] result = new Object[gens.length];
+            for (int i = 0; i < gens.length; i++) {
+                result[i] = gens[i].generate(tc);
+            }
+            return result;
+        };
+    }
+
+    // -----------------------------------------------------------------------
     // Maps (dictionaries)
     // -----------------------------------------------------------------------
 

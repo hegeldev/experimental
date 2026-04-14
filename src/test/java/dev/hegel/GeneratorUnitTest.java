@@ -631,4 +631,27 @@ class GeneratorUnitTest {
         byte[] result = tc.draw(binary());
         assertArrayEquals(new byte[0], result);
     }
+
+    // -----------------------------------------------------------------------
+    // Tuples generator (Generators.java)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void tuplesWithMultipleGenerators() {
+        // just(42L) and just("hello") each consume one server response (integer 0..0)
+        MockDataSource ds = new MockDataSource()
+                .withResponse(LongNode.valueOf(0)) // consumed by just(42L)
+                .withResponse(LongNode.valueOf(0)); // consumed by just("hello")
+        TestCase tc = tc(ds);
+        Object[] result = tc.draw(tuples(just(42L), just("hello")));
+        assertArrayEquals(new Object[]{42L, "hello"}, result);
+    }
+
+    @Test
+    void tuplesWithNoGenerators() {
+        // Empty tuples produce an empty array with no server calls
+        TestCase tc = tc(new MockDataSource());
+        Object[] result = tc.draw(tuples());
+        assertEquals(0, result.length);
+    }
 }
