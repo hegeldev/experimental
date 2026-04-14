@@ -83,6 +83,6 @@ Implement a Hegel property-based testing library in Java.
 - [x] Test utilities (HegelTestUtils: assertAllExamples, findAny, minimal, assertNoExamples)
 - [x] README.md
 - [x] Getting-started guide (in README.md Quick Start section)
-- [x] All tests passing (219 tests)
+- [x] All tests passing (218 tests)
 - [x] `just coverage` passes with 100% coverage
 - [x] `just check` passes
