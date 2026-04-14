@@ -720,4 +720,95 @@ class GeneratorUnitTest {
                 .excludeCharacters("@"));
     assertEquals("z", result);
   }
+
+  // -----------------------------------------------------------------------
+  // SetGenerator (Generators.java)
+  // -----------------------------------------------------------------------
+
+  @Test
+  void setsBasicPath() {
+    // Basic path: elements generator is basic → server returns whole array
+    // Server response mimics a deduplicated list [1, 2, 3]
+    com.fasterxml.jackson.databind.node.ArrayNode arr =
+        Cbor.array(LongNode.valueOf(1L), LongNode.valueOf(2L), LongNode.valueOf(3L));
+    MockDataSource ds = new MockDataSource().withResponse(arr);
+    TestCase tc = tc(ds);
+    java.util.Set<Long> result = tc.draw(sets(integers(0L, 10L)));
+    assertEquals(java.util.Set.of(1L, 2L, 3L), result);
+  }
+
+  @Test
+  void setsBasicPathWithSizeConstraints() {
+    // minSize/maxSize builder methods are exercised
+    com.fasterxml.jackson.databind.node.ArrayNode arr =
+        Cbor.array(LongNode.valueOf(7L), LongNode.valueOf(8L));
+    MockDataSource ds = new MockDataSource().withResponse(arr);
+    TestCase tc = tc(ds);
+    java.util.Set<Long> result = tc.draw(sets(integers(0L, 10L)).minSize(1).maxSize(5));
+    assertEquals(java.util.Set.of(7L, 8L), result);
+  }
+
+  // -----------------------------------------------------------------------
+  // DurationGenerator (Generators.java)
+  // -----------------------------------------------------------------------
+
+  @Test
+  void durationsDefault() {
+    // 1_000_000 ns = 1 ms
+    MockDataSource ds = new MockDataSource().withResponse(LongNode.valueOf(1_000_000L));
+    TestCase tc = tc(ds);
+    java.time.Duration result = tc.draw(durations());
+    assertEquals(java.time.Duration.ofMillis(1), result);
+  }
+
+  @Test
+  void durationsWithMinMaxValue() {
+    // Builder methods: minValue and maxValue
+    MockDataSource ds = new MockDataSource().withResponse(LongNode.valueOf(5_000_000_000L));
+    TestCase tc = tc(ds);
+    java.time.Duration result =
+        tc.draw(
+            durations()
+                .minValue(java.time.Duration.ofSeconds(1))
+                .maxValue(java.time.Duration.ofSeconds(10)));
+    assertEquals(java.time.Duration.ofSeconds(5), result);
+  }
+
+  @Test
+  void durationsMaxValueOverflowClampsToMax() {
+    // Duration.MAX_VALUE.toNanos() overflows; toNanos() should clamp to Long.MAX_VALUE
+    MockDataSource ds = new MockDataSource().withResponse(LongNode.valueOf(0L));
+    TestCase tc = tc(ds);
+    // java.time.Duration.ofSeconds(Long.MAX_VALUE) overflows toNanos()
+    java.time.Duration hugeMax = java.time.Duration.ofSeconds(Long.MAX_VALUE / 2, 0);
+    java.time.Duration result = tc.draw(durations().maxValue(hugeMax));
+    assertEquals(java.time.Duration.ZERO, result);
+  }
+
+  @Test
+  void durationsMinGreaterThanMaxThrows() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            durations()
+                .minValue(java.time.Duration.ofSeconds(10))
+                .maxValue(java.time.Duration.ofSeconds(1))
+                .asBasic());
+  }
+
+  @Test
+  void setsNonBasicPathWithDuplicateRejection() {
+    // Non-basic elements generator → compositional path with collection protocol
+    // Generator produces: 1, 2, 1 (duplicate → reject), 3
+    // collectionMore returns true 4 times then false
+    long[] values = {1L, 2L, 1L, 3L};
+    int[] idx = {0};
+    Generator<Long> nonBasicGen = tc2 -> values[idx[0]++];
+
+    MockDataSource ds = new MockDataSource().withCollectionElements(4);
+    TestCase tc = tc(ds);
+    java.util.Set<Long> result = tc.draw(sets(nonBasicGen));
+    // Duplicate 1 is rejected; final set is {1, 2, 3}
+    assertEquals(java.util.Set.of(1L, 2L, 3L), result);
+  }
 }

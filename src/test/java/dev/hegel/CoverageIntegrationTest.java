@@ -361,6 +361,41 @@ class CoverageIntegrationTest {
   }
 
   // -----------------------------------------------------------------------
+  // sets() basic and non-basic paths
+  // -----------------------------------------------------------------------
+
+  @Test
+  void setsBasicPath() {
+    // Basic elements → server enforces uniqueness via "unique": true schema
+    Hegel.test(
+        "sets basic",
+        Settings.builder().testCases(20).build(),
+        tc -> {
+          java.util.Set<Long> s = tc.draw(sets(integers(0, 10)));
+          // All elements must be unique (basic path relies on server)
+          for (Long v : s) {
+            assertTrue(v >= 0 && v <= 10);
+          }
+        });
+  }
+
+  @Test
+  void setsNonBasicPath() {
+    // Non-basic elements → compositional path with client-side duplicate rejection
+    Hegel.test(
+        "sets non-basic",
+        Settings.builder().testCases(20).build(),
+        tc -> {
+          java.util.Set<Long> s = tc.draw(sets(integers(0, 5).filter(n -> n >= 0)));
+          for (Long v : s) {
+            assertTrue(v >= 0 && v <= 5);
+          }
+          // All elements must be unique
+          assertEquals(s.size(), new java.util.LinkedHashSet<>(s).size());
+        });
+  }
+
+  // -----------------------------------------------------------------------
   // maps() non-basic path
   // -----------------------------------------------------------------------
 
@@ -527,6 +562,22 @@ class CoverageIntegrationTest {
         tc -> {
           String c = tc.draw(characters());
           assertEquals(1, c.codePointCount(0, c.length()), "Expected single codepoint: " + c);
+        });
+  }
+
+  @Test
+  void durationsGenerator() {
+    Hegel.test(
+        "durations",
+        Settings.builder().testCases(20).build(),
+        tc -> {
+          java.time.Duration d =
+              tc.draw(
+                  durations()
+                      .minValue(java.time.Duration.ZERO)
+                      .maxValue(java.time.Duration.ofSeconds(60)));
+          assertFalse(d.isNegative());
+          assertTrue(d.compareTo(java.time.Duration.ofSeconds(60)) <= 0);
         });
   }
 

@@ -83,6 +83,9 @@ Implement a Hegel property-based testing library in Java.
 - [x] Test utilities (HegelTestUtils: assertAllExamples, findAny, minimal, assertNoExamples)
 - [x] README.md
 - [x] Getting-started guide (in README.md Quick Start section)
-- [x] All tests passing (221 tests)
+- [x] characters() generator (single Unicode character)
+- [x] sets() generator (unique elements, basic and non-basic paths)
+- [x] durations() generator (java.time.Duration via nanosecond integers)
+- [x] All tests passing (231 tests)
 - [x] `just coverage` passes with 100% coverage
 - [x] `just check` passes

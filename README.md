@@ -111,6 +111,7 @@ Hegel.test("my property", tc -> {
 ```java
 List<Long>        xs1 = tc.draw(lists(integers()));
 List<Long>        xs2 = tc.draw(lists(integers(0, 10)).minSize(1).maxSize(5));
+Set<Long>         s   = tc.draw(sets(integers(0, 100)));         // unique elements
 Map<Long, String> m   = tc.draw(maps(integers(), text()));
 Long              opt = tc.draw(optional(integers()));           // null or Long
 Long              x1  = tc.draw(sampledFrom(1L, 2L, 3L));
@@ -120,14 +121,16 @@ Long              x2  = tc.draw(oneOf(integers(0, 5), integers(100, 200)));
 ### Format generators
 
 ```java
-String email = tc.draw(emails());
-String url   = tc.draw(urls());
-String ip4   = tc.draw(ipv4Addresses());
-String ip6   = tc.draw(ipv6Addresses());
-String date  = tc.draw(dates());
-String time  = tc.draw(times());
-String dt    = tc.draw(datetimes());
-String s     = tc.draw(fromRegex("[a-z]{3,8}"));
+String   email = tc.draw(emails());
+String   url   = tc.draw(urls());
+String   ip4   = tc.draw(ipv4Addresses());
+String   ip6   = tc.draw(ipv6Addresses());
+String   date  = tc.draw(dates());
+String   time  = tc.draw(times());
+String   dt    = tc.draw(datetimes());
+String   s     = tc.draw(fromRegex("[a-z]{3,8}"));
+String   c     = tc.draw(characters());              // single Unicode character
+Duration d     = tc.draw(durations().maxValue(Duration.ofSeconds(60)));
 ```
 
 ### Combinators

@@ -11,9 +11,11 @@ import dev.hegel.protocol.Cbor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -584,6 +586,100 @@ public final class Generators {
   }
 
   // -----------------------------------------------------------------------
+  // Sets
+  // -----------------------------------------------------------------------
+
+  /**
+   * Generate sets of unique elements from {@code elements}. Backed by {@link LinkedHashSet} to
+   * preserve insertion order.
+   *
+   * <p>When the element generator is basic, uses the {@code "unique": true} list schema so the
+   * server enforces uniqueness. When non-basic, uses the collection protocol with client-side
+   * duplicate rejection via {@code collection_reject}.
+   */
+  public static <T> SetGenerator<T> sets(Generator<T> elements) {
+    return new SetGenerator<>(elements, 0, null);
+  }
+
+  /** Builder for set generators. */
+  public static final class SetGenerator<T> implements Generator<Set<T>> {
+    private final Generator<T> elements;
+    private final int minSize;
+    private final Integer maxSize;
+
+    SetGenerator(Generator<T> elements, int minSize, Integer maxSize) {
+      this.elements = elements;
+      this.minSize = minSize;
+      this.maxSize = maxSize;
+    }
+
+    public SetGenerator<T> minSize(int min) {
+      return new SetGenerator<>(elements, min, this.maxSize);
+    }
+
+    public SetGenerator<T> maxSize(int max) {
+      return new SetGenerator<>(elements, this.minSize, max);
+    }
+
+    @Override
+    public Set<T> generate(TestCase tc) {
+      Optional<BasicGenerator<Set<T>>> basic = asBasic();
+      if (basic.isPresent()) {
+        return basic.get().generate(tc);
+      }
+      return generateCompositional(tc);
+    }
+
+    @Override
+    public Optional<BasicGenerator<Set<T>>> asBasic() {
+      Optional<BasicGenerator<T>> basic = elements.asBasic();
+      if (basic.isEmpty()) return Optional.empty();
+
+      BasicGenerator<T> bg = basic.get();
+      ObjectNode schema = Cbor.map();
+      schema.put("type", "list");
+      schema.put("unique", true);
+      schema.set("elements", bg.schema());
+      schema.put("min_size", minSize);
+      if (maxSize != null) schema.put("max_size", maxSize);
+
+      Function<JsonNode, T> transform = bg.transform();
+      return Optional.of(
+          new BasicGenerator<>(
+              schema,
+              node -> {
+                Set<T> result = new LinkedHashSet<>();
+                for (JsonNode el : node) {
+                  result.add(transform.apply(el));
+                }
+                return result;
+              }));
+    }
+
+    private Set<T> generateCompositional(TestCase tc) {
+      tc.startSpan(Labels.SET);
+      try {
+        long collectionId = tc.newCollection(minSize, maxSize != null ? (long) maxSize : null);
+        Set<T> result = new LinkedHashSet<>();
+        while (tc.collectionMore(collectionId)) {
+          tc.startSpan(Labels.SET_ELEMENT);
+          try {
+            T el = elements.generate(tc);
+            if (!result.add(el)) {
+              tc.collectionReject(collectionId, "duplicate element");
+            }
+          } finally {
+            tc.stopSpan(false);
+          }
+        }
+        return result;
+      } finally {
+        tc.stopSpan(false);
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Tuples
   // -----------------------------------------------------------------------
 
@@ -741,6 +837,76 @@ public final class Generators {
     @SuppressWarnings("unchecked")
     Generator<T> justNull = (Generator<T>) just((Object) null);
     return oneOf(List.of(justNull, element));
+  }
+
+  // -----------------------------------------------------------------------
+  // Durations
+  // -----------------------------------------------------------------------
+
+  /**
+   * Generate {@link java.time.Duration} values.
+   *
+   * <p>Internally generates nanoseconds as a {@code long} (0 to {@code Long.MAX_VALUE}), so the
+   * maximum representable duration is approximately 292 years. Use {@code minValue}/{@code
+   * maxValue} to constrain the range.
+   *
+   * <pre>{@code
+   * Duration d = tc.draw(durations().maxValue(Duration.ofSeconds(60)));
+   * }</pre>
+   */
+  public static DurationGenerator durations() {
+    return new DurationGenerator(0L, Long.MAX_VALUE);
+  }
+
+  /** Builder for duration generators. */
+  public static final class DurationGenerator implements Generator<java.time.Duration> {
+    private final long minNanos;
+    private final long maxNanos;
+
+    DurationGenerator(long minNanos, long maxNanos) {
+      this.minNanos = minNanos;
+      this.maxNanos = maxNanos;
+    }
+
+    /** Set the minimum duration (inclusive). */
+    public DurationGenerator minValue(java.time.Duration min) {
+      return new DurationGenerator(toNanos(min), this.maxNanos);
+    }
+
+    /** Set the maximum duration (inclusive). */
+    public DurationGenerator maxValue(java.time.Duration max) {
+      return new DurationGenerator(this.minNanos, toNanos(max));
+    }
+
+    private static long toNanos(java.time.Duration d) {
+      try {
+        return d.toNanos();
+      } catch (ArithmeticException e) {
+        return Long.MAX_VALUE;
+      }
+    }
+
+    private ObjectNode buildSchema() {
+      if (minNanos > maxNanos)
+        throw new IllegalArgumentException("minValue must be <= maxValue for durations()");
+      ObjectNode schema = Cbor.map();
+      schema.put("type", "integer");
+      schema.put("min_value", minNanos);
+      schema.put("max_value", maxNanos);
+      return schema;
+    }
+
+    @Override
+    public java.time.Duration generate(TestCase tc) {
+      return asBasic().orElseThrow().generate(tc);
+    }
+
+    @Override
+    public Optional<BasicGenerator<java.time.Duration>> asBasic() {
+      ObjectNode schema = buildSchema();
+      return Optional.of(
+          new BasicGenerator<>(schema, node -> java.time.Duration.ofNanos(node.longValue())));
+    }
   }
 
   // -----------------------------------------------------------------------
