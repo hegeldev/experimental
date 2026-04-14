@@ -209,7 +209,9 @@ sub collection_reject {
     };
     $request->{why} = $why if defined $why;
 
-    eval { $self->{stream}->request_cbor($request) };
+    my $response = eval { $self->{stream}->request_cbor($request) };
+    if ($@) { $self->_handle_error($@) }
+    $self->_check_error($response);
 }
 
 # --- Error handling ---
