@@ -10,6 +10,8 @@ open import Hegel.FFI public
         ; valueToInt ; valueToFloat ; valueToBool ; valueToText
         ; valueToBytes ; valueToList
         ; runHegelTest ; runHegelTestQuiet ; runHegelTests
+        ; Session ; openSession ; closeSession
+        ; runOnSession ; runOnSessionQuiet
         )
 
 -- Generator abstraction

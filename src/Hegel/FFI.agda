@@ -139,3 +139,21 @@ postulate
 {-# COMPILE GHC runHegelTest      = \name fn -> H.runHegelTest H.defaultSettings (unpack name) fn #-}
 {-# COMPILE GHC runHegelTestQuiet = \name fn -> H.runHegelTest (H.defaultSettings { H.sVerbosity = H.Quiet }) (unpack name) fn #-}
 {-# COMPILE GHC runHegelTests     = \tests -> H.runHegelTests H.defaultSettings (map (\(n, f) -> (unpack n, f)) tests) #-}
+
+-- ============================================================================
+-- Session management (reuse one server across many tests)
+-- ============================================================================
+
+postulate
+  Session : Set
+  openSession  : Prim.IO Session
+  closeSession : Session → Prim.IO ⊤
+  -- Run a single test on an existing session. Returns True if passed.
+  runOnSession      : Session → String → (TestCase → Prim.IO ⊤) → Prim.IO Bool
+  runOnSessionQuiet : Session → String → (TestCase → Prim.IO ⊤) → Prim.IO Bool
+
+{-# COMPILE GHC Session           = type H.Session #-}
+{-# COMPILE GHC openSession       = H.openSession #-}
+{-# COMPILE GHC closeSession      = \s -> H.closeSession s #-}
+{-# COMPILE GHC runOnSession      = \s name fn -> H.runTestOnSession s H.defaultSettings (unpack name) fn #-}
+{-# COMPILE GHC runOnSessionQuiet = \s name fn -> H.runTestOnSession s (H.defaultSettings { H.sVerbosity = H.Quiet }) (unpack name) fn #-}

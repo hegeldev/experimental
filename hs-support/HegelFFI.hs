@@ -6,6 +6,7 @@ module HegelFFI
   ( TestCase(..), Connection, Stream, Packet(..)
   , Settings(..), TestResult(..), Status(..), Verbosity(..)
   , DataSource(..)
+  , Session(..), openSession, closeSession, runTestOnSession
   , withHegelConnection, spawnServer, performHandshake
   , runTest
   , generate, startSpan, stopSpan
@@ -675,7 +676,55 @@ processEvents conn ts testFn = loop where
               throwIO (HegelError $ "Unknown event: " ++ T.unpack other)
           _ -> throwIO (HegelError $ "Missing event field in: " ++ show t)
 
--- | Run a single Hegel test. Returns True if passed, False if failed.
+-- ============================================================================
+-- Session management
+-- ============================================================================
+
+-- | An opaque session handle. Wraps a connection to the hegel server.
+data Session = Session
+  { sessConn    :: !Connection
+  , sessControl :: !Stream
+  , sessCleanup :: !(IO ())
+  }
+
+-- | Open a session to the hegel server. Must be closed with closeSession.
+openSession :: IO Session
+openSession = do
+  (serverIn, serverOut, ph) <- spawnServer
+  conn <- newConnection serverOut serverIn
+  performHandshake conn
+  cs <- newStream conn 0
+  pure Session
+    { sessConn = conn, sessControl = cs
+    , sessCleanup = do
+        closeConnection conn
+        terminateProcess ph
+        void (waitForProcess ph)
+    }
+
+-- | Close a session, terminating the server.
+closeSession :: Session -> IO ()
+closeSession = sessCleanup
+
+-- | Run a single test on an existing session. Returns True if passed.
+runTestOnSession :: Session -> Settings -> String -> (TestCase -> IO ()) -> IO Bool
+runTestOnSession sess settings name testFn = do
+  result <- runTest (sessConn sess) (sessControl sess) settings name testFn
+  let loud = sVerbosity settings >= Normal
+  case trError result of
+    Just err -> do
+      when loud $ putStrLn $ "FAIL: " ++ name ++ ": " ++ err
+      pure False
+    Nothing | trPassed result -> pure True
+            | otherwise -> do
+                when loud $ putStrLn $ "FAIL: " ++ name
+                pure False
+
+-- ============================================================================
+-- Convenience runners (spawn server per call)
+-- ============================================================================
+
+-- | Run a single Hegel test. Spawns and cleans up a server.
 runHegelTest :: Settings -> String -> (TestCase -> IO ()) -> IO Bool
 runHegelTest settings name testFn =
   withHegelConnection settings $ \conn cs -> do
@@ -690,7 +739,7 @@ runHegelTest settings name testFn =
                   when loud $ putStrLn $ "FAIL: " ++ name
                   pure False
 
--- | Run multiple named Hegel tests. Returns True if all passed.
+-- | Run multiple named Hegel tests on a shared server.
 runHegelTests :: Settings -> [(String, TestCase -> IO ())] -> IO Bool
 runHegelTests settings tests =
   withHegelConnection settings $ \conn cs -> do

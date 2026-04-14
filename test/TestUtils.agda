@@ -6,11 +6,14 @@ module TestUtils where
 open import Data.Bool.Base using (Bool; true; false; not)
 open import Data.List.Base using (List; []; _∷_)
 open import Data.Maybe.Base using (Maybe; just; nothing)
-open import Data.String.Base using (String; _++_)
+open import Data.String.Base using (String)
 open import Data.Unit.Base using (⊤; tt)
 open import IO.Primitive.Core as Prim using (IO; _>>=_; pure)
 
-open import Hegel.FFI using (TestCase; Pair; pair; assume; runHegelTest; runHegelTestQuiet; runHegelTests)
+open import Hegel.FFI using ( TestCase; Pair; pair; assume
+                            ; Session; openSession; closeSession
+                            ; runOnSession; runOnSessionQuiet
+                            ; runHegelTest; runHegelTestQuiet; runHegelTests)
 open import Hegel.Generator using (Generator; draw)
 
 {-# FOREIGN GHC
@@ -60,48 +63,37 @@ private
   condFail tc false = Prim.pure tt
 
 -- ============================================================================
--- assertAllExamples: every generated value must satisfy the predicate
+-- Session-based test utilities (share one server across many tests)
 -- ============================================================================
 
-assertAllExamples : {A : Set} → Generator A → (A → Bool) → Prim.IO Bool
-assertAllExamples gen pred =
-  runHegelTest "assertAllExamples" (λ tc →
+-- | Every generated value must satisfy the predicate.
+assertAllExamples : Session → {A : Set} → Generator A → (A → Bool) → Prim.IO Bool
+assertAllExamples sess gen pred =
+  runOnSession sess "assertAllExamples" (λ tc →
     draw tc gen Prim.>>= λ a →
     condFail tc (not (pred a)))
 
--- ============================================================================
--- findAny: find a value satisfying the condition
--- ============================================================================
-
-findAny : {A : Set} → Generator A → (A → Bool) → Prim.IO Bool
-findAny gen cond =
-  runHegelTestQuiet "findAny" (λ tc →
+-- | Find any value satisfying the condition.
+findAny : Session → {A : Set} → Generator A → (A → Bool) → Prim.IO Bool
+findAny sess gen cond =
+  runOnSessionQuiet sess "findAny" (λ tc →
     draw tc gen Prim.>>= λ a →
     condFail tc (cond a))
   Prim.>>= λ passed →
   Prim.pure (not passed)
 
--- ============================================================================
--- assertNoExamples: no generated value should satisfy the condition
--- ============================================================================
-
-assertNoExamples : {A : Set} → Generator A → (A → Bool) → Prim.IO Bool
-assertNoExamples gen cond =
-  runHegelTest "assertNoExamples" (λ tc →
+-- | No generated value should satisfy the condition.
+assertNoExamples : Session → {A : Set} → Generator A → (A → Bool) → Prim.IO Bool
+assertNoExamples sess gen cond =
+  runOnSession sess "assertNoExamples" (λ tc →
     draw tc gen Prim.>>= λ a →
     condFail tc (cond a))
 
--- ============================================================================
--- minimal: find the smallest counterexample satisfying the condition
--- ============================================================================
-
--- Runs a Hegel test where cond(value) triggers failure. Hegel shrinks to
--- the minimal counterexample. An IORef captures the last failing value,
--- which after shrinking is the minimal one.
-minimal : {A : Set} → Generator A → (A → Bool) → Prim.IO (Maybe A)
-minimal {A} gen cond =
+-- | Find the smallest counterexample satisfying the condition.
+minimal : Session → {A : Set} → Generator A → (A → Bool) → Prim.IO (Maybe A)
+minimal sess {A} gen cond =
   newIORef nothing Prim.>>= λ ref →
-  runHegelTestQuiet "minimal" (λ tc →
+  runOnSessionQuiet sess "minimal" (λ tc →
     draw tc gen Prim.>>= λ a →
     maybeStore ref a (cond a) Prim.>>= λ _ →
     condFail tc (cond a))
