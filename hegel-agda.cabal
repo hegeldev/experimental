@@ -85,3 +85,10 @@ executable test_dicts
   main-is:          TestDicts.hs
   other-modules:    HegelFFI, Conformance
   ghc-options:      -Wall -threaded
+
+executable test_error_handling
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestErrorHandling.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded
