@@ -83,5 +83,5 @@ Implement a Hegel property-based testing library in Perl.
 - [x] Getting-started guide (adapted from hegel-rust)
 - [x] All unit/integration tests passing (55 tests)
 - [x] All 16/16 conformance tests passing
-- [x] `just coverage` runs (86.9% statement coverage)
-- [ ] `just check` passes reliably (FloatConformance has ~30% intermittent failure)
+- [x] `just coverage` runs (86.9% statement, 92% subroutine coverage)
+- [x] `just check` passes (55 tests + 16/16 conformance subtests)
