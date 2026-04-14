@@ -27,7 +27,11 @@ src/main/java/dev/hegel/
 ├── BasicGenerator.java     # Schema-composed generator
 ├── Generator.java          # Generator interface + default combinators
 ├── Settings.java           # Settings builder + CI detection
-├── generators/Generators.java  # All built-in generators
+├── HegelTestUtils.java     # assertAllExamples, assertNoExamples, findAny, minimal
+├── Labels.java             # Span label constants (LIST, SET, MAP, ONE_OF, etc.)
+├── generators/Generators.java  # All built-in generators (integers, floats, text, binary,
+│                               #   characters, just, sampledFrom, lists, sets, maps,
+│                               #   tuples, oneOf, optional, durations, format generators)
 └── protocol/               # Wire protocol (Packet, Connection, Stream, Cbor)
 
 src/test/java/dev/hegel/
@@ -64,6 +68,10 @@ src/test/java/dev/hegel/
 - Non-basic generators use span/collection protocol (start_span, new_collection, etc.)
 - `ListGenerator.asBasic()` is called from `generateBasic()` when elements are basic
 - `MapGenerator.generateCompositional()` is only called when keys or values are non-basic
+- `SetGenerator.asBasic()` uses `"unique": true` flag on list schema (server enforces uniqueness)
+- `SetGenerator.generateCompositional()` uses `collection_reject` for client-side duplicate detection
+- `DurationGenerator` wraps integer schema (nanoseconds); `toNanos()` clamps overflow to `Long.MAX_VALUE`
+- `CharactersGenerator` uses string schema with `min_size=1, max_size=1`; supports codec/codepoint filters
 
 ### Coverage Gotchas
 - Stream.java line 83 (`bufferedRequests.add`): hit when `receiveReply()` encounters a non-reply packet. Requires the server to send a server-initiated request BEFORE sending the actual reply.
