@@ -292,6 +292,63 @@ subtest 'ServerDataSource generic error' => sub {
         qr/Hegel::UnsatisfiedAssumption/, "generic error becomes UnsatisfiedAssumption";
 };
 
+# --- Exercise ServerDataSource _handle_error with StopTest exception ---
+subtest 'ServerDataSource _handle_error with StopTest' => sub {
+    use Hegel::DataSource;
+    no warnings 'redefine';
+    local *Hegel::Stream::request_cbor = sub { die Hegel::StopTest->new("from stream") };
+    local *Hegel::Stream::close_stream = sub { };
+    my $mock_stream = bless { closed => 0 }, 'Hegel::Stream';
+    my $ds = Hegel::ServerDataSource->new(stream => $mock_stream);
+    throws_ok { $ds->generate({ type => 'integer' }) }
+        qr/Hegel::StopTest/, "StopTest re-thrown by _handle_error";
+};
+
+# --- Exercise ServerDataSource _handle_error with UnsatisfiedAssumption ---
+subtest 'ServerDataSource _handle_error with UnsatisfiedAssumption' => sub {
+    use Hegel::DataSource;
+    no warnings 'redefine';
+    local *Hegel::Stream::request_cbor = sub { die Hegel::UnsatisfiedAssumption->new() };
+    local *Hegel::Stream::close_stream = sub { };
+    my $mock_stream = bless { closed => 0 }, 'Hegel::Stream';
+    my $ds = Hegel::ServerDataSource->new(stream => $mock_stream);
+    throws_ok { $ds->generate({ type => 'integer' }) }
+        qr/Hegel::UnsatisfiedAssumption/, "UnsatisfiedAssumption re-thrown";
+};
+
+# --- Exercise ServerDataSource _handle_error in start_span ---
+subtest 'ServerDataSource _handle_error in start_span' => sub {
+    use Hegel::DataSource;
+    no warnings 'redefine';
+    local *Hegel::Stream::request_cbor = sub { die "connection broken" };
+    local *Hegel::Stream::close_stream = sub { };
+    my $mock_stream = bless { closed => 0 }, 'Hegel::Stream';
+    my $ds = Hegel::ServerDataSource->new(stream => $mock_stream);
+    throws_ok { $ds->start_span(1) } qr/Hegel::StopTest/, "connection error in start_span";
+};
+
+# --- Exercise ServerDataSource _handle_error in new_collection ---
+subtest 'ServerDataSource _handle_error in new_collection' => sub {
+    use Hegel::DataSource;
+    no warnings 'redefine';
+    local *Hegel::Stream::request_cbor = sub { die "broken" };
+    local *Hegel::Stream::close_stream = sub { };
+    my $mock_stream = bless { closed => 0 }, 'Hegel::Stream';
+    my $ds = Hegel::ServerDataSource->new(stream => $mock_stream);
+    throws_ok { $ds->new_collection(1, 5) } qr/Hegel::StopTest/, "error in new_collection";
+};
+
+# --- Exercise ServerDataSource _handle_error in collection_more ---
+subtest 'ServerDataSource _handle_error in collection_more' => sub {
+    use Hegel::DataSource;
+    no warnings 'redefine';
+    local *Hegel::Stream::request_cbor = sub { die "broken" };
+    local *Hegel::Stream::close_stream = sub { };
+    my $mock_stream = bless { closed => 0 }, 'Hegel::Stream';
+    my $ds = Hegel::ServerDataSource->new(stream => $mock_stream);
+    throws_ok { $ds->collection_more(0) } qr/Hegel::StopTest/, "error in collection_more";
+};
+
 # --- Exercise ServerDataSource stop_span when aborted ---
 subtest 'ServerDataSource stop_span when aborted' => sub {
     use Hegel::DataSource;
