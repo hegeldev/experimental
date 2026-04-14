@@ -62,6 +62,16 @@ subtest 'reset clears singleton' => sub {
     Hegel::Session->reset();
 };
 
+# --- Handshake failure with fake server ---
+subtest 'handshake failure with fake server' => sub {
+    use FindBin qw($RealBin);
+    local $ENV{HEGEL_SERVER_COMMAND} = "$RealBin/fake_server.sh";
+    Hegel::Session->reset();
+    dies_ok { Hegel::Session->get() } "fake server causes handshake failure";
+    Hegel::Session->reset();
+    delete $ENV{HEGEL_SERVER_COMMAND};
+};
+
 # Restore normal session
 delete $ENV{HEGEL_SERVER_COMMAND};
 delete $ENV{HEGEL_PROTOCOL_TEST_MODE};
