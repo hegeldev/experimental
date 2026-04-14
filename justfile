@@ -1,6 +1,7 @@
 set dotenv-load
 
 export PERL5LIB := env("HOME") + "/perl5/lib/perl5:" + justfile_directory() + "/lib"
+export PATH := env("HOME") + "/perl5/bin:" + env("PATH")
 
 # Run all tests
 test:
