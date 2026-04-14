@@ -66,6 +66,9 @@ sub run {
 
             # Process results
             my $results = $event->{results} || {};
+            if (defined $results->{passed} && !$results->{passed}) {
+                $passed = 0;
+            }
             if ($results->{error}) {
                 $error_message = $results->{error};
                 $passed = 0;
