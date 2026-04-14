@@ -50,14 +50,18 @@ def test_conformance(subtests):
                 min_value=INT_MIN,
                 max_value=INT_MAX,
             ),
+            StopTestOnGenerateConformance(BIN_DIR / "test_stop_test_on_generate"),
+            StopTestOnMarkCompleteConformance(
+                BIN_DIR / "test_stop_test_on_mark_complete"
+            ),
+            ErrorResponseConformance(BIN_DIR / "test_error_response"),
+            EmptyTestConformance(BIN_DIR / "test_empty_test"),
+            StopTestOnCollectionMoreConformance(
+                BIN_DIR / "test_stop_test_on_collection_more"
+            ),
+            StopTestOnNewCollectionConformance(
+                BIN_DIR / "test_stop_test_on_new_collection"
+            ),
         ],
         subtests,
-        skip_tests=[
-            StopTestOnGenerateConformance,
-            StopTestOnMarkCompleteConformance,
-            ErrorResponseConformance,
-            EmptyTestConformance,
-            StopTestOnCollectionMoreConformance,
-            StopTestOnNewCollectionConformance,
-        ],
     )

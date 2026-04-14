@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use Carp qw(croak);
+use Types::Serialiser;
 use Hegel::Protocol qw(cbor_encode cbor_decode);
 
 # Exception class for assume() failures
@@ -144,7 +145,7 @@ sub stop_span {
     eval {
         $self->{stream}->request_cbor({
             command => 'stop_span',
-            discard => $discard ? \1 : \0,
+            discard => $discard ? Types::Serialiser::true : Types::Serialiser::false,
         });
     };
     # Ignore errors in stop_span during cleanup

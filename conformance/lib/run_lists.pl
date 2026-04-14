@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use JSON::XS qw(decode_json encode_json);
 
+use Types::Serialiser;
 use Hegel::Runner;
 use Hegel::Generator;
 use Hegel::TestCase;
@@ -42,7 +43,7 @@ if ($unique && $mode eq 'basic') {
         type     => 'list',
         elements => $basic->schema(),
         min_size => $list_args{min_size} || 0,
-        unique   => \1,
+        unique   => Types::Serialiser::true,
     };
     $schema->{max_size} = $list_args{max_size} if defined $list_args{max_size};
     $gen = Hegel::BasicGenerator->new(schema => $schema);

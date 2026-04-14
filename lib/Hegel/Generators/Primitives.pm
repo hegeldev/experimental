@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use Hegel::Generator;
+use Types::Serialiser;
 
 use Exporter 'import';
 our @EXPORT_OK = qw(
@@ -26,10 +27,10 @@ sub floats {
     my $schema = { type => 'float' };
     $schema->{min_value}      = $args{min_value} + 0.0      if defined $args{min_value};
     $schema->{max_value}      = $args{max_value} + 0.0      if defined $args{max_value};
-    $schema->{allow_nan}      = $args{allow_nan} ? \1 : \0  if defined $args{allow_nan};
-    $schema->{allow_infinity} = $args{allow_infinity} ? \1 : \0 if defined $args{allow_infinity};
-    $schema->{exclude_min}    = $args{exclude_min} ? \1 : \0 if defined $args{exclude_min};
-    $schema->{exclude_max}    = $args{exclude_max} ? \1 : \0 if defined $args{exclude_max};
+    $schema->{allow_nan}      = $args{allow_nan} ? Types::Serialiser::true : Types::Serialiser::false if defined $args{allow_nan};
+    $schema->{allow_infinity} = $args{allow_infinity} ? Types::Serialiser::true : Types::Serialiser::false if defined $args{allow_infinity};
+    $schema->{exclude_min}    = $args{exclude_min} ? Types::Serialiser::true : Types::Serialiser::false if defined $args{exclude_min};
+    $schema->{exclude_max}    = $args{exclude_max} ? Types::Serialiser::true : Types::Serialiser::false if defined $args{exclude_max};
     $schema->{width}          = $args{width}                 if defined $args{width};
     return Hegel::BasicGenerator->new(schema => $schema);
 }
@@ -88,7 +89,7 @@ sub sampled_from {
 sub from_regex {
     my ($pattern, %args) = @_;
     my $schema = { type => 'regex', pattern => $pattern };
-    $schema->{fullmatch} = $args{fullmatch} ? \1 : \0 if defined $args{fullmatch};
+    $schema->{fullmatch} = $args{fullmatch} ? Types::Serialiser::true : Types::Serialiser::false if defined $args{fullmatch};
     if ($args{alphabet}) {
         $schema->{alphabet} = $args{alphabet};
     }

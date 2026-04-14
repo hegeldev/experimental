@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use Carp qw(croak);
+use Types::Serialiser;
 use Hegel::Session;
 use Hegel::TestCase;
 use Hegel::Protocol qw(cbor_encode cbor_decode);
@@ -33,7 +34,7 @@ sub run {
         test_cases => ($settings->{test_cases} || 100) + 0,
     };
     $run_test->{seed} = $settings->{seed} + 0 if defined $settings->{seed};
-    $run_test->{derandomize} = ($settings->{derandomize} ? \1 : \0)
+    $run_test->{derandomize} = ($settings->{derandomize} ? Types::Serialiser::true : Types::Serialiser::false)
         if defined $settings->{derandomize};
     if (defined $settings->{database}) {
         $run_test->{database} = $settings->{database};
@@ -61,7 +62,7 @@ sub run {
 
         if ($event_type eq 'test_done') {
             # Acknowledge test_done
-            $test_stream->write_reply($msg_id, cbor_encode({ result => \1 }));
+            $test_stream->write_reply($msg_id, cbor_encode({ result => Types::Serialiser::true }));
 
             # Process results
             my $results = $event->{results} || {};
@@ -85,7 +86,7 @@ sub run {
                     my ($replay_msg_id, $replay_bytes) = $test_stream->receive_request();
                     my $replay_event = cbor_decode($replay_bytes);
                     # Acknowledge
-                    $test_stream->write_reply($replay_msg_id, cbor_encode({ result => \1 }));
+                    $test_stream->write_reply($replay_msg_id, cbor_encode({ result => Types::Serialiser::true }));
 
                     my $tc_stream_id = $replay_event->{stream_id};
                     my $tc_stream = $connection->connect_stream($tc_stream_id);
@@ -117,7 +118,7 @@ sub run {
 
         if ($event_type eq 'test_case') {
             # Acknowledge the test case event BEFORE running (prevents deadlock)
-            $test_stream->write_reply($msg_id, cbor_encode({ result => \1 }));
+            $test_stream->write_reply($msg_id, cbor_encode({ result => Types::Serialiser::true }));
 
             my $tc_stream_id = $event->{stream_id};
             my $is_final = $event->{is_final} ? 1 : 0;
