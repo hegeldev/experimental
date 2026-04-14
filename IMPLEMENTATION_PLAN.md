@@ -11,7 +11,7 @@
 - [x] **README/examples show the generator API** — quickstart uses draw/integersIn/lists
 - [x] **Public API hides CBOR internals** — cborMap, generateFromSchema removed from Hegel.agda re-exports
 - [ ] **Test utilities implemented** — no assert_all_examples, find_any, minimal, assert_no_examples
-- [ ] **oneOf optimized paths** — only Path 3 (always composite), missing Paths 1 and 2
+- [x] **oneOf optimized paths** — Path 2 (tuple schema) for all-basic, Path 3 for non-basic
 - [ ] **Protocol unit tests** — minimal (one basic test through real server)
 
 ## Phase 1: Conformance tests using the real Agda API

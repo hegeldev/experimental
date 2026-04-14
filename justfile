@@ -24,6 +24,8 @@ test: build-hs
     ./build/TestBasic
     {{agda_compile}} test/TestGenerators.agda
     ./build/TestGenerators
+    {{agda_compile}} test/TestComprehensive.agda
+    ./build/TestComprehensive
 
 # Run the Haskell protocol test
 test-protocol: build-hs
