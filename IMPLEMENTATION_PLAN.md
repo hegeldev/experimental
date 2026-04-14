@@ -77,11 +77,11 @@ Implement a Hegel property-based testing library in Perl.
 - [x] from_regex
 
 ## Phase 9: Quality and Documentation
-- [ ] Test utilities (assert_all_examples, find_any, minimal, assert_no_examples)
+- [x] Test utilities (assert_all_examples, find_any, minimal, assert_no_examples)
 - [ ] Shrink quality tests
 - [x] README.md (with Claude-authored disclaimer, matching hegel-rust format)
 - [ ] Getting-started guide (adapted from hegel-rust)
-- [x] All unit/integration tests passing
+- [x] All unit/integration tests passing (51 tests)
 - [x] 14/16 conformance tests passing (Float: server precision edge case, Dict non_basic: duplicate keys)
-- [x] `just coverage` runs (59.6% total - needs more tests for 100%)
+- [x] `just coverage` runs (82.7% statement coverage)
 - [ ] `just check` passes
