@@ -30,11 +30,29 @@ my $runner = Hegel::Runner->new(
     test_fn => sub {
         my ($tc) = @_;
         my $val = $tc->draw($gen);
-        # Report codepoints as an array of integers
-        # Must use Unicode-aware decoding for multibyte characters
-        use Encode qw(decode);
-        my $unicode = eval { decode('UTF-8', $val, Encode::FB_DEFAULT) } // $val;
-        my @codepoints = map { ord($_) } split(//, $unicode);
+        # Report codepoints as an array of integers.
+        # The server may send WTF-8 (surrogates), so decode manually:
+        # parse UTF-8/WTF-8 byte sequences into codepoints.
+        my @codepoints;
+        my $i = 0;
+        my @bytes = unpack("C*", $val);
+        while ($i < scalar @bytes) {
+            my $b = $bytes[$i];
+            my ($cp, $len);
+            if ($b < 0x80) {
+                $cp = $b; $len = 1;
+            } elsif ($b < 0xC0) {
+                $cp = 0xFFFD; $len = 1;  # invalid continuation
+            } elsif ($b < 0xE0) {
+                $cp = ($b & 0x1F) << 6 | ($bytes[$i+1] & 0x3F); $len = 2;
+            } elsif ($b < 0xF0) {
+                $cp = ($b & 0x0F) << 12 | ($bytes[$i+1] & 0x3F) << 6 | ($bytes[$i+2] & 0x3F); $len = 3;
+            } else {
+                $cp = ($b & 0x07) << 18 | ($bytes[$i+1] & 0x3F) << 12 | ($bytes[$i+2] & 0x3F) << 6 | ($bytes[$i+3] & 0x3F); $len = 4;
+            }
+            push @codepoints, $cp;
+            $i += $len;
+        }
         print $metrics_fh encode_json({ codepoints => \@codepoints }) . "\n";
     },
     settings => { test_cases => $test_cases },
