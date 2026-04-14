@@ -134,4 +134,50 @@ subtest 'flaky test detection' => sub {
     ok(defined $result, "completed");
 };
 
+# --- Primitives: ip_addresses invalid version ---
+subtest 'ip_addresses invalid version' => sub {
+    throws_ok { ip_addresses(version => 99) }
+        qr/version must be/, "invalid ip version dies";
+};
+
+# --- Primitives: from_regex with alphabet ---
+subtest 'from_regex with alphabet' => sub {
+    hegel "regex with alphabet" => sub {
+        my ($tc) = @_;
+        my $gen = from_regex("[a-z]+", fullmatch => 1,
+            alphabet => { min_codepoint => 97, max_codepoint => 122 });
+        my $val = $tc->draw($gen);
+        ok(defined $val, "regex with alphabet: $val");
+    }, test_cases => 3;
+};
+
+# --- Protocol: invalid terminator ---
+subtest 'protocol invalid terminator' => sub {
+    use Hegel::Protocol qw(read_packet write_packet MAGIC);
+    use String::CRC32 qw(crc32);
+    pipe(my $rd, my $wr) or die;
+    $wr->autoflush(1);
+
+    # Write a packet with valid header but wrong terminator
+    my $payload = "test";
+    my $header_no_crc = pack("NNNNN", MAGIC, 0, 0, 0, length($payload));
+    my $checksum = crc32($header_no_crc . $payload);
+    my $header = pack("NNNNN", MAGIC, $checksum, 0, 0, length($payload));
+    syswrite($wr, $header . $payload . chr(0xFF));  # wrong terminator
+
+    throws_ok { read_packet($rd) } qr/Invalid terminator/;
+    close $wr; close $rd;
+};
+
+# --- Protocol: connection closed during read ---
+subtest 'protocol connection closed' => sub {
+    use Hegel::Protocol qw(read_packet);
+    pipe(my $rd, my $wr) or die;
+    # Write only 5 bytes (not enough for header)
+    syswrite($wr, "HEGL");
+    close $wr;  # close immediately
+    throws_ok { read_packet($rd) } qr/Connection closed|Read error/;
+    close $rd;
+};
+
 done_testing;
