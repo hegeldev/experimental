@@ -72,6 +72,16 @@ subtest 'handshake failure with fake server' => sub {
     delete $ENV{HEGEL_SERVER_COMMAND};
 };
 
+# --- Bad version from fake server ---
+subtest 'bad version from fake server' => sub {
+    use FindBin qw($RealBin);
+    local $ENV{HEGEL_SERVER_COMMAND} = "perl -I lib $RealBin/fake_bad_version.pl";
+    Hegel::Session->reset();
+    throws_ok { Hegel::Session->get() } qr/Unsupported protocol version|version/i;
+    Hegel::Session->reset();
+    delete $ENV{HEGEL_SERVER_COMMAND};
+};
+
 # Restore normal session
 delete $ENV{HEGEL_SERVER_COMMAND};
 delete $ENV{HEGEL_PROTOCOL_TEST_MODE};
