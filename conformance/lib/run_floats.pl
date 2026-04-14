@@ -24,6 +24,20 @@ $gen_args{exclude_max} = 1 if $params->{exclude_max};
 $gen_args{allow_nan} = $params->{allow_nan} if defined $params->{allow_nan};
 $gen_args{allow_infinity} = $params->{allow_infinity} if defined $params->{allow_infinity};
 
+# Format a float64 as the shortest decimal string that round-trips exactly.
+# This matches Python's repr() behavior.
+sub _float_repr {
+    my ($v) = @_;
+    my $packed = pack("d", $v);
+    for my $digits (1..20) {
+        my $s = sprintf("%.*g", $digits, $v);
+        # Check if parsing this string back gives the same float64
+        my $repacked = pack("d", $s + 0.0);
+        return $s if $repacked eq $packed;
+    }
+    return sprintf("%.20g", $v);  # fallback
+}
+
 my $gen = floats(%gen_args);
 
 my $runner = Hegel::Runner->new(
@@ -36,8 +50,10 @@ my $runner = Hegel::Runner->new(
         } elsif (isinf($val)) {
             $line = '{"is_infinite":true}';
         } else {
-            # Use %.17g for full float64 precision (JSON::XS loses precision)
-            $line = sprintf '{"value":%.17g}', $val;
+            # Format float with minimum digits for exact round-trip.
+            # %.17g can produce representations that Python's json.loads
+            # maps to a different float64. Use shortest-exact format.
+            $line = sprintf '{"value":%s}', _float_repr($val);
         }
         print $metrics_fh "$line\n";
     },
