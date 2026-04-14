@@ -1,22 +1,24 @@
-# hegel-java
+> **Beta notice:** hegel-java is in early development. Bugs and API changes are expected. Please report issues at https://github.com/hegeldev/hegel-java/issues.
 
-A Java implementation of [Hegel](https://github.com/hegeldev/hegel-core), a property-based testing library backed by [Hypothesis](https://hypothesis.readthedocs.io/).
+> **Note:** This implementation was generated with the assistance of Claude (claude-sonnet-4-6) and has not been extensively used in production. Please report issues.
 
-> **Note**: This library was authored with the assistance of Claude (claude-sonnet-4-6).
+# Hegel for Java
 
-## Overview
-
-Hegel runs property-based tests by communicating with a `hegel-core` subprocess over stdio using a CBOR binary protocol. The server manages test case generation, shrinking, and the test database.
+**hegel-java** is a property-based testing library for Java, based on [Hypothesis](https://hypothesis.readthedocs.io/), using the [Hegel protocol](https://hegel.dev).
 
 ## Prerequisites
 
 - Java 21+
 - Maven 3.8+
-- [uv](https://docs.astral.sh/uv/) (for running hegel-core): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Python and [uv](https://docs.astral.sh/uv/) (for running hegel-core):
 
-## Quick Start
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-Add the dependency to your `pom.xml`:
+## Installation
+
+Add hegel-java to your `pom.xml`:
 
 ```xml
 <dependency>
@@ -27,81 +29,87 @@ Add the dependency to your `pom.xml`:
 </dependency>
 ```
 
-Write a property test:
+## Quick Start
+
+Property-based testing generates many inputs automatically and shrinks failures to the simplest possible case. Here is a complete example that finds a bug in a sort function.
+
+First, define a sort function with a subtle bug — it uses a `TreeSet`, which silently removes duplicate elements:
 
 ```java
-import static dev.hegel.generators.Generators.*;
-import dev.hegel.Hegel;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeSet;
 
-class SortTest {
-    @Test
-    void sortPreservesLength() {
-        Hegel.test("sort preserves length", tc -> {
-            List<Long> xs = tc.draw(lists(integers(-100, 100)));
-            List<Long> sorted = sort(xs);
-            assertEquals(xs.size(), sorted.size());
-        });
-    }
+/** A sort with a bug: TreeSet removes duplicate elements. */
+static <T extends Comparable<T>> List<T> badSort(List<T> list) {
+    return new ArrayList<>(new TreeSet<>(list));
+}
+```
+
+Write a property test that checks that sorting preserves the element count:
+
+```java
+import dev.hegel.Hegel;
+import static dev.hegel.generators.Generators.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+@Test
+void sortPreservesLength() {
+    Hegel.test("sort preserves length", tc -> {
+        List<Long> xs = tc.draw(lists(integers(-10, 10)));
+        List<Long> sorted = badSort(xs);
+        assertEquals(xs.size(), sorted.size(),
+            "Sort must not lose elements: " + xs + " -> " + sorted);
+    });
 }
 ```
 
 Run with Maven:
 
-```
+```bash
 mvn test
 ```
 
-Hegel catches the bug and shows the minimal failing case:
+Hegel finds the bug and shrinks the failing case to its minimal form:
 
 ```
-AssertionError: Counterexample found.
-  Failing input: [0, 0]  (after shrinking from a larger list)
+AssertionError: Sort must not lose elements: [0, 0] -> [0]
 ```
 
-## API
+Hegel generated hundreds of lists. When it found `[3, 3, 1, 2]` failing, it automatically shrunk that list until it found `[0, 0]` — the simplest possible list that exposes the duplicate-removal bug.
 
-### Entry Points
+## Getting Started
+
+### Drawing values
+
+Inside `Hegel.test()`, you receive a `TestCase` (`tc`) that you use to draw generated values:
 
 ```java
-// Simple form
-Hegel.test("description", tc -> { ... });
-
-// With settings
-Hegel.test("description", Settings.builder().testCases(500).build(), tc -> { ... });
-
-// Builder form (for databaseKey)
-new Hegel(tc -> { ... })
-    .settings(Settings.builder().testCases(100).build())
-    .databaseKey("my_test")
-    .run();
+Hegel.test("my property", tc -> {
+    long   n = tc.draw(integers());           // any long
+    long   n = tc.draw(integers(0, 100));     // in [0, 100]
+    int    n = tc.draw(integers(0, 100).asInt()); // as int
+    double d = tc.draw(floats());             // any double (including NaN, ±∞)
+    double d = tc.draw(floats().minValue(0.0).maxValue(1.0));
+    boolean b = tc.draw(booleans());
+    String s  = tc.draw(text());
+    String s  = tc.draw(text().minSize(3).maxSize(20).ascii());
+    byte[] b  = tc.draw(binary().minSize(1).maxSize(256));
+});
 ```
 
-### Drawing Values
+### Collection generators
 
 ```java
-long n     = tc.draw(integers());
-long n     = tc.draw(integers(0, 100));       // bounded
-int  n     = tc.draw(integers(0, 100).asInt());
-double d   = tc.draw(floats());
-double d   = tc.draw(floats().minValue(0.0).maxValue(1.0));
-boolean b  = tc.draw(booleans());
-String s   = tc.draw(text());
-String s   = tc.draw(text().minSize(3).maxSize(20).ascii());
-byte[] b   = tc.draw(binary().minSize(1).maxSize(256));
+List<Long>        xs = tc.draw(lists(integers()));
+List<Long>        xs = tc.draw(lists(integers(0, 10)).minSize(1).maxSize(5));
+Map<Long, String> m  = tc.draw(maps(integers(), text()));
+Long              x  = tc.draw(optional(integers()));     // null or Long
+Long              x  = tc.draw(sampledFrom(1L, 2L, 3L));
+Long              x  = tc.draw(oneOf(integers(0, 5), integers(100, 200)));
 ```
 
-### Collections
-
-```java
-List<Long>       xs = tc.draw(lists(integers()));
-List<Long>       xs = tc.draw(lists(integers(0, 10)).minSize(1).maxSize(5));
-Map<Long, String> m = tc.draw(maps(integers(), text()));
-Long             x  = tc.draw(optional(integers()));  // null or Long
-Long             x  = tc.draw(sampledFrom(1L, 2L, 3L));
-Long             x  = tc.draw(oneOf(integers(0, 5), integers(100, 200)));
-```
-
-### Format Generators
+### Format generators
 
 ```java
 String email = tc.draw(emails());
@@ -117,81 +125,64 @@ String s     = tc.draw(fromRegex("[a-z]{3,8}"));
 ### Combinators
 
 ```java
-// map: transform a generated value
+// map: transform a generated value (basic generators stay basic)
 Generator<String> gen = integers(0, 100).map(n -> "item-" + n);
 
-// filter: constrain values (retries up to 3 times, then assume())
-Generator<Long> positive = integers(-100, 100).filter(n -> n > 0);
+// filter: constrain generated values (uses assume() under the hood)
+Generator<Long> pos = integers(-100, 100).filter(n -> n > 0);
 
-// flatMap: dependent generation
+// flatMap: generate a value that depends on a previously drawn value
 Generator<String> gen = integers(1, 10).flatMap(n ->
     text().minSize(n.intValue()).maxSize(n.intValue())
 );
 ```
 
-### Control
+### Control functions
 
 ```java
-tc.assume(condition);       // skip this input if false
-tc.note("debug: " + value); // print during final shrunk replay
-tc.target(score, "label");  // guide toward higher scores
+tc.assume(x > 0);           // skip this test case if false
+tc.note("x = " + x);       // print during the final shrunk replay
+tc.target((double) x, "x"); // guide Hegel toward larger values of x
 ```
 
 ### Settings
 
 ```java
 Settings s = Settings.builder()
-    .testCases(500)          // number of test cases
-    .seed(42L)               // deterministic seed
-    .derandomize(true)       // replay known examples only
-    .database("/tmp/my.db")  // example database path ("" to disable)
-    .verbosity(Settings.Verbosity.DEBUG)
+    .testCases(500)               // number of test cases (default: 100)
+    .seed(42L)                    // deterministic seed
+    .derandomize(true)            // replay known examples only (auto-enabled in CI)
+    .database("/tmp/mydb")        // example database path
+    .database("")                 // "" to disable the database
     .suppressHealthCheck("too_slow")
     .build();
+
+Hegel.test("my property", s, tc -> { ... });
+```
+
+### Builder form
+
+When you need to set a `databaseKey` separately from the test name:
+
+```java
+new Hegel(tc -> {
+    long x = tc.draw(integers());
+    // ...
+})
+.settings(Settings.builder().testCases(200).build())
+.databaseKey("my_property_v2")
+.run();
 ```
 
 ## Development
 
 ```bash
-just test       # run tests (no coverage check)
-just coverage   # run tests + enforce 100% line coverage
+just test        # run tests (no coverage enforcement)
+just coverage    # run tests + enforce 100% line coverage
+just check       # alias for coverage
 just conformance # run conformance tests against hegel-core
-just check      # alias for coverage
 ```
 
-## Architecture
+## License
 
-```
-src/main/java/dev/hegel/
-├── Hegel.java              # Entry point: test(), run(), event loop
-├── TestCase.java           # Handle passed to test functions
-├── DataSource.java         # Interface abstracting protocol operations
-├── ServerDataSource.java   # DataSource backed by real server stream
-├── BasicGenerator.java     # Schema-based generator (server does all work)
-├── Generator.java          # Interface: generate(), asBasic(), map(), filter(), flatMap()
-├── Session.java            # Manages hegel-core subprocess + Connection
-├── Settings.java           # Test settings builder
-├── Labels.java             # Span label constants
-├── StopTestException.java  # Signals test abort (overflow, etc.)
-├── AssumeException.java    # Signals assume() failure
-└── generators/
-    └── Generators.java     # All built-in generators (integers, floats, lists, ...)
-
-src/main/java/dev/hegel/protocol/
-├── Connection.java         # Multiplexed IO: reader thread + stream registry
-├── Stream.java             # Single logical stream (send/receive with buffering)
-├── Packet.java             # Wire format: magic + CRC32 + streamId + msgId + payload
-├── Cbor.java               # CBOR encode/decode via Jackson
-└── HegelProtocolException  # Protocol-level errors
-```
-
-**Protocol flow:**
-1. `Session.init()` spawns `uv tool run hegel --stdio` and handshakes
-2. `Hegel.run()` sends `run_test` on the control stream
-3. Server sends a `test_case` event on a new stream
-4. `ServerDataSource` calls `generate()`, `start_span()`, etc. on that stream
-5. Test body draws values; each `tc.draw()` calls `DataSource.generate(schema)`
-6. On completion, `mark_complete` is sent; server may shrink and retry
-7. `check_results` is called at the end; failures throw `AssertionError`
-
-**Stream IDs:** Control stream = 0. `newStream()` assigns IDs via `(counter << 1) | 1`, so the first test stream has ID 3.
+MIT — see [LICENSE](LICENSE).

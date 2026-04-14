@@ -25,7 +25,6 @@ class SettingsTest {
     void defaultSettings() {
         Settings s = Settings.defaults();
         assertEquals(100, s.testCases());
-        assertEquals(Settings.Verbosity.NORMAL, s.verbosity());
     }
 
     @Test
@@ -44,12 +43,6 @@ class SettingsTest {
     void seedDefaultIsNull() {
         Settings s = Settings.builder().build();
         assertNull(s.seed());
-    }
-
-    @Test
-    void verbosityBuilder() {
-        Settings s = Settings.builder().verbosity(Settings.Verbosity.DEBUG).build();
-        assertEquals(Settings.Verbosity.DEBUG, s.verbosity());
     }
 
     @Test
@@ -119,25 +112,6 @@ class SettingsTest {
         Settings s = Settings.builder().build();
         assertFalse(s.derandomize());
         assertNull(s.database());
-    }
-
-    // -----------------------------------------------------------------------
-    // Verbosity enum
-    // -----------------------------------------------------------------------
-
-    @Test
-    void verbosityValues() {
-        assertEquals("quiet",   Settings.Verbosity.QUIET.value());
-        assertEquals("normal",  Settings.Verbosity.NORMAL.value());
-        assertEquals("verbose", Settings.Verbosity.VERBOSE.value());
-        assertEquals("debug",   Settings.Verbosity.DEBUG.value());
-    }
-
-    @Test
-    void allVerbosityEnumValues() {
-        // Ensure all 4 enum constants exist
-        Settings.Verbosity[] values = Settings.Verbosity.values();
-        assertEquals(4, values.length);
     }
 
     // -----------------------------------------------------------------------

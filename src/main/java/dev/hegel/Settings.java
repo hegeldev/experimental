@@ -18,9 +18,6 @@ public final class Settings {
     /** Random seed, or {@code null} to use Hypothesis's default. */
     private final Long seed;
 
-    /** Output verbosity. Default: {@link Verbosity#NORMAL}. */
-    private final Verbosity verbosity;
-
     /** When true, use the database for deterministic replay. Default: auto (true in CI). */
     private final boolean derandomize;
 
@@ -33,7 +30,6 @@ public final class Settings {
     private Settings(Builder b) {
         this.testCases = b.testCases;
         this.seed = b.seed;
-        this.verbosity = b.verbosity;
         this.derandomize = b.derandomize;
         this.database = b.database;
         this.suppressHealthCheck = Collections.unmodifiableList(new ArrayList<>(b.suppressHealthCheck));
@@ -45,7 +41,6 @@ public final class Settings {
 
     public int testCases() { return testCases; }
     public Long seed() { return seed; }
-    public Verbosity verbosity() { return verbosity; }
     public boolean derandomize() { return derandomize; }
     public String database() { return database; }
     public List<String> suppressHealthCheck() { return suppressHealthCheck; }
@@ -71,7 +66,6 @@ public final class Settings {
 
         private int testCases = 100;
         private Long seed = null;
-        private Verbosity verbosity = Verbosity.NORMAL;
         private boolean derandomize = isInCI();
         private String database = isInCI() ? "" : null; // "" means disabled
         private List<String> suppressHealthCheck = new ArrayList<>();
@@ -85,11 +79,6 @@ public final class Settings {
 
         public Builder seed(long seed) {
             this.seed = seed;
-            return this;
-        }
-
-        public Builder verbosity(Verbosity verbosity) {
-            this.verbosity = verbosity;
             return this;
         }
 
@@ -146,20 +135,4 @@ public final class Settings {
         return false;
     }
 
-    // -----------------------------------------------------------------------
-    // Verbosity enum
-    // -----------------------------------------------------------------------
-
-    public enum Verbosity {
-        QUIET("quiet"),
-        NORMAL("normal"),
-        VERBOSE("verbose"),
-        DEBUG("debug");
-
-        private final String value;
-
-        Verbosity(String value) { this.value = value; }
-
-        public String value() { return value; }
-    }
 }
