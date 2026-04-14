@@ -1,16 +1,17 @@
 module Hegel.Combinators where
 
 open import Data.Bool.Base using (Bool; true; false; if_then_else_)
-open import Data.List.Base using (List; []; _∷_; length)
+open import Data.List.Base using (List; []; _∷_; length; map)
 open import Data.Maybe.Base using (Maybe; just; nothing)
 open import Data.Nat.Base using (ℕ; zero; suc; _∸_)
 open import Data.Integer.Base as ℤ using (ℤ; +_)
 open import Data.Unit.Base using (⊤; tt)
-open import Function.Base using (_∘_; id)
+open import Function.Base using (_∘_; id; const)
 open import IO.Primitive.Core as Prim using (IO; _>>=_; pure)
 
 open import Hegel.FFI
 open import Hegel.Generator
+open import Hegel.Generators.Primitives using (justGen)
 
 -- ============================================================================
 -- map: preserves basicness when source is basic
@@ -64,14 +65,61 @@ flatMap genA f = composite (λ tc →
   Prim.pure b)
 
 -- ============================================================================
--- oneOf: basic if all branches have basic reps with no transforms,
---        otherwise composite
+-- oneOf: Path 2 (tuple schema) when all branches basic,
+--        Path 3 (composite) when any branch is non-basic.
+-- (Path 1 is N/A for Agda since all generators have transforms.)
 -- ============================================================================
 
--- For simplicity, we always use the composite path for oneOf.
--- The basic optimization can be added later.
+private
+  -- Collect basic representations from all generators.
+  -- Returns nothing if any generator is non-basic.
+  collectBasics : {A : Set} → List (Generator A) → Maybe (List (BasicGenerator A))
+  collectBasics [] = just []
+  collectBasics (g ∷ gs) with Generator.asBasic g
+  ... | nothing = nothing
+  ... | just bg with collectBasics gs
+  ...   | nothing  = nothing
+  ...   | just bgs = just (bg ∷ bgs)
+
+  intToNat : Maybe ℤ → ℕ
+  intToNat nothing  = 0
+  intToNat (just x) = ℤ.∣ x ∣
+
 oneOf : {A : Set} → List (Generator A) → Generator A
-oneOf {A} gens = composite (λ tc →
+oneOf {A} gens with collectBasics gens
+-- Path 2: all branches basic — use tuple schema for single round-trip
+... | just bgs = fromBasic (mkBasicGen schema transform)
+  where
+    n : ℕ
+    n = length bgs
+
+    indexSchema : Value
+    indexSchema = cborMap
+      ( (cborText "type"      ,ᵥ cborText "integer")
+      ∷ (cborText "min_value" ,ᵥ cborInt (+ 0))
+      ∷ (cborText "max_value" ,ᵥ cborInt (+ (n ∸ 1)))
+      ∷ [])
+
+    schema : Value
+    schema = cborMap
+      ( (cborText "type"     ,ᵥ cborText "tuple")
+      ∷ (cborText "elements" ,ᵥ cborList (indexSchema ∷ map BasicGenerator.schema bgs))
+      ∷ [])
+
+    -- Apply the ith basic generator's transform to the ith value
+    applyNth : List (BasicGenerator A) → ℕ → List Value → A
+    applyNth (bg ∷ _)   zero    (v ∷ _)  = BasicGenerator.transform bg v
+    applyNth (_ ∷ bgs′) (suc i) (_ ∷ vs) = applyNth bgs′ i vs
+    applyNth _          _       _         = dflt where postulate dflt : A
+
+    transform : Value → A
+    transform v with valueToList v
+    -- Server returns [index, val1, val2, ..., valN]
+    ... | just (idxV ∷ vals) = applyNth bgs (intToNat (valueToInt idxV)) vals
+    ... | _                  = dflt where postulate dflt : A
+
+-- Path 3: some non-basic — composite generation
+... | nothing = composite (λ tc →
   startSpan tc Labels.ONE-OF Prim.>>= λ _ →
   let indexSchema = cborMap
         ( (cborText "type"      ,ᵥ cborText "integer")
@@ -84,23 +132,20 @@ oneOf {A} gens = composite (λ tc →
   stopSpan tc false Prim.>>= λ _ →
   Prim.pure result)
   where
-    intToNat : Maybe ℤ → ℕ
-    intToNat nothing  = 0
-    intToNat (just x) = ℤ.∣ x ∣
-
     drawNth : TestCase → List (Generator A) → ℕ → Prim.IO A
     drawNth tc (g ∷ _)  zero    = Generator.generate g tc
     drawNth tc (_ ∷ gs) (suc n) = drawNth tc gs n
     drawNth tc []       _       = assume tc false Prim.>>= λ _ →
-                                  Generator.generate (composite (λ _ → Prim.pure tt')) tc
-      where postulate tt' : A
+                                  Generator.generate (composite (λ _ → Prim.pure tt′)) tc
+      where postulate tt′ : A
 
 -- ============================================================================
 -- optional: generate Nothing or Just a
+-- Uses basic first branch (justGen + gmap) so oneOf can optimize.
 -- ============================================================================
 
 optional : {A : Set} → Generator A → Generator (Maybe A)
 optional gen = oneOf
-  ( composite (λ _ → Prim.pure nothing)
+  ( gmap (const nothing) (justGen tt)
   ∷ gmap just gen
   ∷ [])
