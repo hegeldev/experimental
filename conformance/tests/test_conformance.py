@@ -36,15 +36,23 @@ def test_conformance(subtests):
             IntegerConformance(
                 BIN_DIR / "test_integers", min_value=INT_MIN, max_value=INT_MAX
             ),
+            FloatConformance(BIN_DIR / "test_floats"),
+            TextConformance(BIN_DIR / "test_text"),
+            BinaryConformance(BIN_DIR / "test_binary"),
+            ListConformance(
+                BIN_DIR / "test_lists", min_value=INT_MIN, max_value=INT_MAX
+            ),
+            SampledFromConformance(BIN_DIR / "test_sampled_from"),
+            DictConformance(
+                BIN_DIR / "test_dicts",
+                min_key=INT_MIN,
+                max_key=INT_MAX,
+                min_value=INT_MIN,
+                max_value=INT_MAX,
+            ),
         ],
         subtests,
         skip_tests=[
-            FloatConformance,
-            TextConformance,
-            BinaryConformance,
-            ListConformance,
-            SampledFromConformance,
-            DictConformance,
             StopTestOnGenerateConformance,
             StopTestOnMarkCompleteConformance,
             ErrorResponseConformance,

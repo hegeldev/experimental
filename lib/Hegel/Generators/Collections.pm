@@ -192,11 +192,7 @@ package _DictComposite {
             $tc->start_span(Hegel::TestCase::LABEL_MAP_ENTRY);
             my $k = $self->{keys}->do_draw($tc);
             my $v = $self->{values}->do_draw($tc);
-            if (exists $result{$k}) {
-                $tc->collection_reject($coll_id, "duplicate key");
-                $tc->stop_span(1);
-                next;
-            }
+            # Silently overwrite duplicate keys (don't reject/loop)
             $result{$k} = $v;
             $tc->stop_span(0);
         }
