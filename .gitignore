@@ -1,0 +1,25 @@
+# Build outputs
+build/
+dist-newstyle/
+_build/
+
+# Agda build artifacts
+*.agdai
+MAlonzo/
+
+# Haskell artifacts
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+
+# GHC environment (local to machine)
+.ghc.environment.*
+
+# Editor files
+*~
+.#*
+\#*#
+
+# OS files
+.DS_Store

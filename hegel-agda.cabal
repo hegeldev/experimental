@@ -1,0 +1,87 @@
+cabal-version:   3.0
+name:            hegel-agda
+version:         0.1.0.0
+synopsis:        Hegel property-based testing for Agda
+license:         MPL-2.0
+build-type:      Simple
+
+common deps
+  build-depends:
+      base           >= 4.16 && < 5
+    , bytestring     >= 0.11
+    , cborg           >= 0.2
+    , serialise       >= 0.2
+    , containers      >= 0.6
+    , digest          >= 0.0.1
+    , process         >= 1.6
+    , text            >= 2.0
+  default-language: Haskell2010
+
+library
+  import:           deps
+  hs-source-dirs:   hs-support
+  exposed-modules:  HegelFFI, Conformance
+  ghc-options:      -Wall
+
+executable test-protocol
+  import:           deps
+  hs-source-dirs:   hs-support
+  main-is:          TestProtocol.hs
+  other-modules:    HegelFFI
+  ghc-options:      -Wall -threaded
+
+executable test_booleans
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestBooleans.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded
+
+executable test_integers
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestIntegers.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded
+
+executable test_floats
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestFloats.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded
+
+executable test_text
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestText.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded
+
+executable test_binary
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestBinary.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded
+
+executable test_sampled_from
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestSampledFrom.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded
+
+executable test_lists
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestLists.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded
+
+executable test_dicts
+  import:           deps
+  hs-source-dirs:   conformance, hs-support
+  main-is:          TestDicts.hs
+  other-modules:    HegelFFI, Conformance
+  ghc-options:      -Wall -threaded

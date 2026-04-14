@@ -1,0 +1,8 @@
+name: hegel-agda
+include:
+  src
+  test
+depend:
+  standard-library
+flags:
+  --guardedness
