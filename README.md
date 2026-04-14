@@ -86,27 +86,27 @@ Inside `Hegel.test()`, you receive a `TestCase` (`tc`) that you use to draw gene
 
 ```java
 Hegel.test("my property", tc -> {
-    long   n = tc.draw(integers());           // any long
-    long   n = tc.draw(integers(0, 100));     // in [0, 100]
-    int    n = tc.draw(integers(0, 100).asInt()); // as int
-    double d = tc.draw(floats());             // any double (including NaN, ±∞)
-    double d = tc.draw(floats().minValue(0.0).maxValue(1.0));
-    boolean b = tc.draw(booleans());
-    String s  = tc.draw(text());
-    String s  = tc.draw(text().minSize(3).maxSize(20).ascii());
-    byte[] b  = tc.draw(binary().minSize(1).maxSize(256));
+    long    n1 = tc.draw(integers());                        // any long
+    long    n2 = tc.draw(integers(0, 100));                  // in [0, 100]
+    int     n3 = tc.draw(integers(0, 100).asInt());          // as int
+    double  d1 = tc.draw(floats());                          // any double (including NaN, ±∞)
+    double  d2 = tc.draw(floats().minValue(0.0).maxValue(1.0));
+    boolean b1 = tc.draw(booleans());
+    String  s1 = tc.draw(text());
+    String  s2 = tc.draw(text().minSize(3).maxSize(20).ascii());
+    byte[]  b2 = tc.draw(binary().minSize(1).maxSize(256));
 });
 ```
 
 ### Collection generators
 
 ```java
-List<Long>        xs = tc.draw(lists(integers()));
-List<Long>        xs = tc.draw(lists(integers(0, 10)).minSize(1).maxSize(5));
-Map<Long, String> m  = tc.draw(maps(integers(), text()));
-Long              x  = tc.draw(optional(integers()));     // null or Long
-Long              x  = tc.draw(sampledFrom(1L, 2L, 3L));
-Long              x  = tc.draw(oneOf(integers(0, 5), integers(100, 200)));
+List<Long>        xs1 = tc.draw(lists(integers()));
+List<Long>        xs2 = tc.draw(lists(integers(0, 10)).minSize(1).maxSize(5));
+Map<Long, String> m   = tc.draw(maps(integers(), text()));
+Long              opt = tc.draw(optional(integers()));           // null or Long
+Long              x1  = tc.draw(sampledFrom(1L, 2L, 3L));
+Long              x2  = tc.draw(oneOf(integers(0, 5), integers(100, 200)));
 ```
 
 ### Format generators

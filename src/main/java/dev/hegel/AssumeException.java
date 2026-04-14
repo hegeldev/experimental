@@ -7,9 +7,9 @@ package dev.hegel;
  */
 public class AssumeException extends RuntimeException {
 
-    static final String MESSAGE = "__HEGEL_ASSUME_FAIL";
+  static final String MESSAGE = "__HEGEL_ASSUME_FAIL";
 
-    public AssumeException() {
-        super(MESSAGE);
-    }
+  public AssumeException() {
+    super(MESSAGE);
+  }
 }

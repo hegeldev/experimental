@@ -44,9 +44,13 @@ conformance: build-conformance
     uv run --with 'hegel-core==0.4.0' --with pytest --with pytest-subtests --with hypothesis \
         pytest tests/conformance/ -v
 
-# Run lint (placeholder - Java uses checkstyle/spotless)
-lint:
-    echo "Lint: OK (no linter configured)"
+# Format all Java source files with google-java-format
+format:
+    mvn com.spotify.fmt:fmt-maven-plugin:2.23:format -q
 
-# Run all checks
+# Check that all Java source files are formatted (google-java-format)
+lint:
+    mvn com.spotify.fmt:fmt-maven-plugin:2.23:check
+
+# Run all checks (format enforcement is part of mvn verify via fmt:check)
 check: coverage
