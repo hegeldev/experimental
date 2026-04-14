@@ -57,15 +57,20 @@ sub hegel {
 
     Test::More::subtest($name => sub {
         my $result = $runner->run();
-
-        if ($result->{error_message}) {
-            Test::More::fail("Hegel error: $result->{error_message}");
-        } elsif ($result->{failure_message}) {
-            Test::More::fail("Falsifying example found:\n$result->{failure_message}");
-        } elsif ($result->{passed}) {
-            Test::More::pass("Property held for all test cases");
-        }
+        _report_result($result);
     });
+}
+
+# Extracted for testability
+sub _report_result {
+    my ($result) = @_;
+    if ($result->{error_message}) {
+        Test::More::fail("Hegel error: $result->{error_message}");
+    } elsif ($result->{failure_message}) {
+        Test::More::fail("Falsifying example found:\n$result->{failure_message}");
+    } elsif ($result->{passed}) {
+        Test::More::pass("Property held for all test cases");
+    }
 }
 
 1;

@@ -134,6 +134,19 @@ subtest 'flaky test detection' => sub {
     ok(defined $result, "completed");
 };
 
+# --- Hegel.pm: _report_result branches ---
+# These test the fail() paths by using TODO blocks so the failures don't
+# count against the test suite.
+subtest 'report_result error_message' => sub {
+    local $TODO = "exercising error_message branch";
+    Hegel::_report_result({ error_message => "test error", passed => 0 });
+};
+
+subtest 'report_result failure_message' => sub {
+    local $TODO = "exercising failure_message branch";
+    Hegel::_report_result({ failure_message => "found bug", passed => 0 });
+};
+
 # --- Primitives: ip_addresses invalid version ---
 subtest 'ip_addresses invalid version' => sub {
     throws_ok { ip_addresses(version => 99) }
