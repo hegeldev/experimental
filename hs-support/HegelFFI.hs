@@ -5,6 +5,7 @@
 module HegelFFI
   ( TestCase(..), Connection, Stream, Packet(..)
   , Settings(..), TestResult(..), Status(..)
+  , DataSource(..)
   , withHegelConnection, spawnServer, performHandshake
   , runTest
   , generate, startSpan, stopSpan
@@ -16,6 +17,9 @@ module HegelFFI
   , defaultSettings
   , runHegelTest, runHegelTests
   , StopTest(..)
+  , serverDataSource
+  , fakeDataSource, FakeDataSourceConfig(..), defaultFakeConfig
+  , writePacket, readPacket, encodeCbor, decodeCbor
   ) where
 
 import qualified Codec.CBOR.Term as CBOR
@@ -408,9 +412,115 @@ performHandshake conn = do
         throwIO (HegelError $ "Unsupported version: " ++ T.unpack v)
     _ -> pure ()  -- lenient on format
 
+-- ============================================================================
+-- DataSource abstraction
+-- ============================================================================
+
+-- | DataSource separates test logic from protocol communication.
+-- ServerDataSource talks to the real hegel-core server.
+-- FakeDataSource enables unit testing error paths without a server.
+data DataSource = DataSource
+  { dsGenerate         :: !(CBOR.Term -> IO CBOR.Term)
+  , dsStartSpan        :: !(Int -> IO ())
+  , dsStopSpan         :: !(Bool -> IO ())
+  , dsNewCollection    :: !(Int -> Maybe Int -> IO ())
+  , dsCollectionMore   :: !(IO Bool)
+  , dsCollectionReject :: !(IO ())
+  , dsMarkComplete     :: !(Status -> Maybe String -> IO ())
+  , dsNote             :: !(String -> IO ())
+  , dsTarget           :: !(Double -> String -> IO ())
+  }
+
+-- | Create a DataSource backed by a real server stream.
+serverDataSource :: Stream -> DataSource
+serverDataSource strm = DataSource
+  { dsGenerate = \schema -> requestCbor strm $ CBOR.TMap
+      [ (CBOR.TString "command", CBOR.TString "generate")
+      , (CBOR.TString "schema",  schema) ]
+  , dsStartSpan = \label -> void $ requestCbor strm $ CBOR.TMap
+      [ (CBOR.TString "command", CBOR.TString "start_span")
+      , (CBOR.TString "label",   CBOR.TInt label) ]
+  , dsStopSpan = \discard -> void $ requestCbor strm $ CBOR.TMap
+      [ (CBOR.TString "command", CBOR.TString "stop_span")
+      , (CBOR.TString "discard", CBOR.TBool discard) ]
+  , dsNewCollection = \minSz maxSz -> void $ requestCbor strm $ CBOR.TMap $
+      [ (CBOR.TString "command",  CBOR.TString "new_collection")
+      , (CBOR.TString "min_size", CBOR.TInt minSz)
+      ] ++ maybe [] (\ms -> [(CBOR.TString "max_size", CBOR.TInt ms)]) maxSz
+  , dsCollectionMore = do
+      r <- requestCbor strm $ CBOR.TMap
+        [(CBOR.TString "command", CBOR.TString "collection_more")]
+      case termToBool r of
+        Just b  -> pure b
+        Nothing -> case termLookup "more" r of
+          Just (CBOR.TBool b) -> pure b
+          _ -> throwIO (HegelError "Expected bool from collection_more")
+  , dsCollectionReject = void $ requestCbor strm $ CBOR.TMap
+      [(CBOR.TString "command", CBOR.TString "collection_reject")]
+  , dsMarkComplete = \status origin -> do
+      let fields = [ (CBOR.TString "command", CBOR.TString "mark_complete")
+                   , (CBOR.TString "status",  CBOR.TString (statusToText status))
+                   ] ++ case origin of
+                          Just o  -> [(CBOR.TString "origin", CBOR.TString (T.pack o))]
+                          Nothing -> [(CBOR.TString "origin", CBOR.TNull)]
+      void $ requestCbor strm (CBOR.TMap fields)
+  , dsNote = \msg -> void $ requestCbor strm $ CBOR.TMap
+      [ (CBOR.TString "command", CBOR.TString "note")
+      , (CBOR.TString "message", CBOR.TString (T.pack msg)) ]
+  , dsTarget = \value label -> void $ requestCbor strm $ CBOR.TMap
+      [ (CBOR.TString "command", CBOR.TString "target")
+      , (CBOR.TString "value",   CBOR.TDouble value)
+      , (CBOR.TString "label",   CBOR.TString (T.pack label)) ]
+  }
+
+-- ============================================================================
+-- FakeDataSource for unit testing
+-- ============================================================================
+
+data FakeDataSourceConfig = FakeDataSourceConfig
+  { fdsGenerates       :: ![CBOR.Term]      -- ^ Queue of values to return from generate
+  , fdsCollectionCount :: !Int              -- ^ How many times collectionMore returns True
+  , fdsThrowOnGenerate :: !Bool             -- ^ Throw StopTest on generate
+  , fdsThrowOnStartSpan :: !Bool            -- ^ Throw error on startSpan
+  }
+
+defaultFakeConfig :: FakeDataSourceConfig
+defaultFakeConfig = FakeDataSourceConfig [] 0 False False
+
+-- | Create a FakeDataSource for testing without a server.
+fakeDataSource :: FakeDataSourceConfig -> IO DataSource
+fakeDataSource cfg = do
+  genQueue <- newIORef (fdsGenerates cfg)
+  collCount <- newIORef (fdsCollectionCount cfg)
+  pure DataSource
+    { dsGenerate = \_ -> do
+        when (fdsThrowOnGenerate cfg) $ throwIO StopTest
+        q <- readIORef genQueue
+        case q of
+          []     -> throwIO StopTest
+          (v:vs) -> writeIORef genQueue vs >> pure v
+    , dsStartSpan = \_ ->
+        when (fdsThrowOnStartSpan cfg) $ throwIO (HegelError "startSpan error")
+    , dsStopSpan = \_ -> pure ()
+    , dsNewCollection = \_ _ -> pure ()
+    , dsCollectionMore = do
+        n <- readIORef collCount
+        if n > 0
+          then writeIORef collCount (n - 1) >> pure True
+          else pure False
+    , dsCollectionReject = pure ()
+    , dsMarkComplete = \_ _ -> pure ()
+    , dsNote = \_ -> pure ()
+    , dsTarget = \_ _ -> pure ()
+    }
+
+-- ============================================================================
 -- Test case context
+-- ============================================================================
+
 data TestCase = TestCase
-  { tcStream     :: !Stream
+  { tcDataSource :: !DataSource
+  , tcStream     :: !Stream        -- kept for closeStream in runner
   , tcConnection :: !Connection
   , tcIsFinal    :: !(IORef Bool)
   }
@@ -441,65 +551,37 @@ data TestResult = TestResult
   , trFlaky  :: !(Maybe String)
   } deriving (Show)
 
--- Core operations
+-- Core operations (delegate to DataSource)
 generate :: TestCase -> CBOR.Term -> IO CBOR.Term
-generate tc schema = requestCbor (tcStream tc) $ CBOR.TMap
-  [ (CBOR.TString "command", CBOR.TString "generate")
-  , (CBOR.TString "schema",  schema) ]
+generate tc = dsGenerate (tcDataSource tc)
 
 startSpan :: TestCase -> Int -> IO ()
-startSpan tc label = void $ requestCbor (tcStream tc) $ CBOR.TMap
-  [ (CBOR.TString "command", CBOR.TString "start_span")
-  , (CBOR.TString "label",   CBOR.TInt label) ]
+startSpan tc = dsStartSpan (tcDataSource tc)
 
 stopSpan :: TestCase -> Bool -> IO ()
-stopSpan tc discard = void $ requestCbor (tcStream tc) $ CBOR.TMap
-  [ (CBOR.TString "command", CBOR.TString "stop_span")
-  , (CBOR.TString "discard", CBOR.TBool discard) ]
+stopSpan tc = dsStopSpan (tcDataSource tc)
 
 newCollection :: TestCase -> Int -> Maybe Int -> IO ()
-newCollection tc minSz maxSz = void $ requestCbor (tcStream tc) $ CBOR.TMap $
-  [ (CBOR.TString "command",  CBOR.TString "new_collection")
-  , (CBOR.TString "min_size", CBOR.TInt minSz)
-  ] ++ maybe [] (\ms -> [(CBOR.TString "max_size", CBOR.TInt ms)]) maxSz
+newCollection tc = dsNewCollection (tcDataSource tc)
 
 collectionMore :: TestCase -> IO Bool
-collectionMore tc = do
-  r <- requestCbor (tcStream tc) $ CBOR.TMap
-    [(CBOR.TString "command", CBOR.TString "collection_more")]
-  case termToBool r of
-    Just b  -> pure b
-    Nothing -> case termLookup "more" r of
-      Just (CBOR.TBool b) -> pure b
-      _ -> throwIO (HegelError "Expected bool from collection_more")
+collectionMore tc = dsCollectionMore (tcDataSource tc)
 
 collectionReject :: TestCase -> IO ()
-collectionReject tc = void $ requestCbor (tcStream tc) $ CBOR.TMap
-  [(CBOR.TString "command", CBOR.TString "collection_reject")]
+collectionReject tc = dsCollectionReject (tcDataSource tc)
 
 markComplete :: TestCase -> Status -> Maybe String -> IO ()
-markComplete tc status origin = do
-  let fields = [ (CBOR.TString "command", CBOR.TString "mark_complete")
-               , (CBOR.TString "status",  CBOR.TString (statusToText status))
-               ] ++ case origin of
-                      Just o  -> [(CBOR.TString "origin", CBOR.TString (T.pack o))]
-                      Nothing -> [(CBOR.TString "origin", CBOR.TNull)]
-  void $ requestCbor (tcStream tc) (CBOR.TMap fields)
+markComplete tc = dsMarkComplete (tcDataSource tc)
 
 hegelAssume :: TestCase -> Bool -> IO ()
 hegelAssume _ True  = pure ()
 hegelAssume _ False = throwIO HegelReject
 
 hegelNote :: TestCase -> String -> IO ()
-hegelNote tc msg = void $ requestCbor (tcStream tc) $ CBOR.TMap
-  [ (CBOR.TString "command", CBOR.TString "note")
-  , (CBOR.TString "message", CBOR.TString (T.pack msg)) ]
+hegelNote tc = dsNote (tcDataSource tc)
 
 hegelTarget :: TestCase -> Double -> String -> IO ()
-hegelTarget tc value label = void $ requestCbor (tcStream tc) $ CBOR.TMap
-  [ (CBOR.TString "command", CBOR.TString "target")
-  , (CBOR.TString "value",   CBOR.TDouble value)
-  , (CBOR.TString "label",   CBOR.TString (T.pack label)) ]
+hegelTarget tc = dsTarget (tcDataSource tc)
 
 -- Test runner
 withHegelConnection :: Settings -> (Connection -> Stream -> IO a) -> IO a
@@ -544,7 +626,7 @@ processEvents conn ts testFn = loop where
               writeReply ts msgId (encodeCbor $ CBOR.TMap [(CBOR.TString "result", CBOR.TNull)])
               ds <- newStream conn dsId
               isFinal <- newIORef False
-              let tc = TestCase ds conn isFinal
+              let tc = TestCase (serverDataSource ds) ds conn isFinal
               result <- try (testFn tc) :: IO (Either SomeException ())
               case result of
                 Right () -> do

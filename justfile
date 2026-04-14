@@ -27,9 +27,10 @@ test: build-hs
     {{agda_compile}} test/TestComprehensive.agda
     ./build/TestComprehensive
 
-# Run the Haskell protocol test
+# Run the Haskell protocol and DataSource unit tests
 test-protocol: build-hs
     cabal run test-protocol
+    cabal run test-datasource
 
 # Compile all Agda conformance binaries
 build-conformance:

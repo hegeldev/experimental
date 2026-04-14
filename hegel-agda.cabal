@@ -29,3 +29,10 @@ executable test-protocol
   main-is:          TestProtocol.hs
   other-modules:    HegelFFI
   ghc-options:      -Wall -threaded
+
+executable test-datasource
+  import:           deps
+  hs-source-dirs:   hs-support
+  main-is:          TestDataSource.hs
+  other-modules:    HegelFFI
+  ghc-options:      -Wall -threaded
