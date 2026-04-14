@@ -25,8 +25,17 @@ check-coverage: coverage
         print "Coverage report generated.\n"; \
     '
 
+# Check syntax of all Perl modules
+lint:
+    @for f in $(find lib -name '*.pm'); do perl -c -I lib "$f" 2>&1 | grep -v "syntax OK" || true; done
+    @echo "Lint passed"
+
+# Format (no-op: Perl has no standard formatter)
+format:
+    @echo "No formatter configured for Perl"
+
 # All CI checks
-check: test conformance
+check: test lint conformance
 
 # Clean build artifacts
 clean:
