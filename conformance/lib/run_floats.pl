@@ -35,7 +35,6 @@ my $runner = Hegel::Runner->new(
             $metrics{is_nan} = \1;
         } elsif (isinf($val)) {
             $metrics{is_infinite} = \1;
-            $metrics{value} = $val + 0.0;
         } else {
             $metrics{value} = $val + 0.0;
         }
