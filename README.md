@@ -86,6 +86,130 @@ AssertionError: Sort must not lose elements: [0, 0] -> [0]
 
 Hegel generated hundreds of lists. When it found `[3, 3, 1, 2]` failing, it automatically shrunk that list until it found `[0, 0]` — the simplest possible list that exposes the duplicate-removal bug.
 
+## Tutorial
+
+### Your first passing test
+
+The simplest property to test: a generated integer stays within its declared bounds.
+
+```java
+import dev.hegel.Hegel;
+import static dev.hegel.generators.Generators.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+@Test
+void integersAreInRange() {
+    Hegel.test("integers are in range", tc -> {
+        long n = tc.draw(integers(0, 100));
+        assertTrue(n >= 0 && n <= 100, "Expected n in [0,100], got " + n);
+    });
+}
+```
+
+Run `mvn test`. Hegel generates 100 values and the test passes.
+
+### Your first failing test
+
+Now write a property that looks right but is subtly wrong. Integer addition can overflow:
+
+```java
+@Test
+void additionLooksPositive() {
+    Hegel.test("sum of two positives is larger", tc -> {
+        long x = tc.draw(integers(1, Long.MAX_VALUE));
+        long y = tc.draw(integers(1, Long.MAX_VALUE));
+        assertTrue(x + y > x, "sum should grow"); // overflows!
+    });
+}
+```
+
+Hegel finds the bug and shrinks it to its simplest form:
+
+```
+AssertionError: sum should grow
+Falsifying example: x=1, y=9223372036854775807
+```
+
+The shrunk example uses the smallest `x` (1) that exposes the overflow. Hegel found a large pair first, then shrunk until it found the minimal case.
+
+### Constrained generation
+
+If you only want even numbers, use `filter()`:
+
+```java
+Generator<Long> evens = integers(-100, 100).filter(n -> n % 2 == 0);
+```
+
+Or use `map()` to derive a value:
+
+```java
+Generator<Long> doubled = integers(0, 50).map(n -> n * 2);
+```
+
+### Dependent generation
+
+Because drawing values is imperative, you can use an earlier result to configure a later generator. This is one of Hegel's most powerful features:
+
+```java
+@Test
+void listIndexIsAlwaysValid() {
+    Hegel.test("list index is always valid", tc -> {
+        int n = (int) tc.draw(integers(1, 10));
+        List<Long> lst = tc.draw(lists(integers()).minSize(n).maxSize(n));
+        int index = (int) tc.draw(integers(0, n - 1));
+        // lst always has exactly n elements, so index is always in bounds
+        assertNotNull(lst.get(index));
+    });
+}
+```
+
+First draw the length `n`, then use it to generate a list of exactly that length, then draw a valid index. All three draws are correlated — and Hegel can still shrink the whole thing together.
+
+### Composite objects
+
+Draw multiple values and combine them into a domain object:
+
+```java
+record Point(long x, long y) {}
+
+@Test
+void pointsAreInQuadrant() {
+    Hegel.test("points are in first quadrant", tc -> {
+        long x = tc.draw(integers(0, 1000));
+        long y = tc.draw(integers(0, 1000));
+        Point p = new Point(x, y);
+        assertTrue(p.x() >= 0 && p.y() >= 0);
+    });
+}
+```
+
+When a test fails, Hegel shrinks all the draws together, so the reported failing `Point` is always the simplest one.
+
+### Debugging with `note()`
+
+Use `tc.note()` to print values during the final shrunk replay:
+
+```java
+Hegel.test("note example", tc -> {
+    long x = tc.draw(integers());
+    tc.note("drew x = " + x);
+    // ... rest of test
+});
+```
+
+Notes are suppressed during normal runs and only printed when replaying the shrunk failure, so they do not slow down test execution.
+
+### Changing the number of test cases
+
+```java
+Settings s = Settings.builder().testCases(500).build();
+Hegel.test("more thorough test", s, tc -> {
+    // ...
+});
+```
+
+The default is 100. Increase for properties that need wider coverage; decrease if they are slow.
+
 ## Getting Started
 
 ### Drawing values
