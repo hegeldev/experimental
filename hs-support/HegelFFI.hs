@@ -45,6 +45,7 @@ import Control.Monad (when, unless, void, forever)
 import System.IO (Handle, hSetBinaryMode, hFlush, hSetBuffering, BufferMode(..))
 import System.Process
 import System.Environment (lookupEnv)
+import System.IO.Unsafe (unsafePerformIO)
 
 -- Constants
 packetMagic :: Word32
@@ -268,6 +269,8 @@ getOrCreateInbox conn sid =
 
 sendRequest :: Stream -> ByteString -> IO Word32
 sendRequest strm payload = do
+  exited <- readIORef (connServerExited (strmConn strm))
+  when exited $ throwIO (HegelError "Server has exited")
   msgId <- atomicModifyIORef' (strmNextMsgId strm) (\n -> (n + 1, n))
   connSendPacket (strmConn strm) Packet
     { pktStreamId = strmId strm, pktMessageId = msgId
@@ -386,13 +389,12 @@ closeConnection conn = do
   mapM_ killThread tid
 
 -- Server management
-spawnServer :: Verbosity -> IO (Handle, Handle, ProcessHandle)
-spawnServer verbosity = do
+spawnServer :: IO (Handle, Handle, ProcessHandle)
+spawnServer = do
   cmdOverride <- lookupEnv "HEGEL_SERVER_COMMAND"
-  let vFlag = verbosityToString verbosity
-      (cmd, args) = case cmdOverride of
-        Just c  -> (head (words c), tail (words c) ++ ["--stdio", "--verbosity", vFlag])
-        Nothing -> ("python3", ["-m", "hegel", "--stdio", "--verbosity", vFlag])
+  let (cmd, args) = case cmdOverride of
+        Just c  -> (head (words c), tail (words c) ++ ["--stdio"])
+        Nothing -> ("python3", ["-m", "hegel", "--stdio"])
   (Just si, Just so, _, ph) <- createProcess (proc cmd args)
     { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
   hSetBinaryMode si True
@@ -594,17 +596,43 @@ hegelNote tc = dsNote (tcDataSource tc)
 hegelTarget :: TestCase -> Double -> String -> IO ()
 hegelTarget tc = dsTarget (tcDataSource tc)
 
--- Test runner
+-- ============================================================================
+-- Singleton session: one server per process, shared across all tests
+-- ============================================================================
+
+data HegelSession = HegelSession
+  { hsConn    :: !Connection
+  , hsControl :: !Stream
+  , hsProcess :: !ProcessHandle
+  }
+
+{-# NOINLINE globalSession #-}
+globalSession :: MVar (Maybe HegelSession)
+globalSession = unsafePerformIO (newMVar Nothing)
+
+getSession :: IO HegelSession
+getSession = modifyMVar globalSession $ \ms -> case ms of
+  Just s  -> pure (Just s, s)
+  Nothing -> do
+    (serverIn, serverOut, ph) <- spawnServer
+    conn <- newConnection serverOut serverIn
+    -- Monitor thread: detect server crash and unblock pending reads.
+    -- When the server process exits, mark the connection as exited so
+    -- any thread blocked on a stream recv gets an error instead of hanging.
+    _ <- forkIO $ do
+      _ <- waitForProcess ph
+      writeIORef (connServerExited conn) True
+    performHandshake conn
+    cs <- newStream conn 0
+    let s = HegelSession conn cs ph
+    pure (Just s, s)
+
+-- | Run an action with a connection to the hegel server.
+-- Uses a singleton session — the server is spawned once and reused.
 withHegelConnection :: Settings -> (Connection -> Stream -> IO a) -> IO a
-withHegelConnection settings action = do
-  (serverIn, serverOut, ph) <- spawnServer (sVerbosity settings)
-  conn <- newConnection serverOut serverIn
-  performHandshake conn
-  cs <- newStream conn 0
-  action conn cs `finally` do
-    closeConnection conn
-    terminateProcess ph
-    void (waitForProcess ph)
+withHegelConnection _settings action = do
+  s <- getSession
+  action (hsConn s) (hsControl s)
 
 runTest :: Connection -> Stream -> Settings -> String
         -> (TestCase -> IO ()) -> IO TestResult
