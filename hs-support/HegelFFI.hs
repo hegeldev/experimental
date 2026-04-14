@@ -45,7 +45,6 @@ import Control.Monad (when, unless, void, forever)
 import System.IO (Handle, hSetBinaryMode, hFlush, hSetBuffering, BufferMode(..))
 import System.Process
 import System.Environment (lookupEnv)
-import System.IO.Unsafe (unsafePerformIO)
 
 -- Constants
 packetMagic :: Word32
@@ -596,43 +595,18 @@ hegelNote tc = dsNote (tcDataSource tc)
 hegelTarget :: TestCase -> Double -> String -> IO ()
 hegelTarget tc = dsTarget (tcDataSource tc)
 
--- ============================================================================
--- Singleton session: one server per process, shared across all tests
--- ============================================================================
-
-data HegelSession = HegelSession
-  { hsConn    :: !Connection
-  , hsControl :: !Stream
-  , hsProcess :: !ProcessHandle
-  }
-
-{-# NOINLINE globalSession #-}
-globalSession :: MVar (Maybe HegelSession)
-globalSession = unsafePerformIO (newMVar Nothing)
-
-getSession :: IO HegelSession
-getSession = modifyMVar globalSession $ \ms -> case ms of
-  Just s  -> pure (Just s, s)
-  Nothing -> do
-    (serverIn, serverOut, ph) <- spawnServer
-    conn <- newConnection serverOut serverIn
-    -- Monitor thread: detect server crash and unblock pending reads.
-    -- When the server process exits, mark the connection as exited so
-    -- any thread blocked on a stream recv gets an error instead of hanging.
-    _ <- forkIO $ do
-      _ <- waitForProcess ph
-      writeIORef (connServerExited conn) True
-    performHandshake conn
-    cs <- newStream conn 0
-    let s = HegelSession conn cs ph
-    pure (Just s, s)
-
 -- | Run an action with a connection to the hegel server.
--- Uses a singleton session — the server is spawned once and reused.
+-- Spawns a fresh server, runs the action, and cleans up.
 withHegelConnection :: Settings -> (Connection -> Stream -> IO a) -> IO a
 withHegelConnection _settings action = do
-  s <- getSession
-  action (hsConn s) (hsControl s)
+  (serverIn, serverOut, ph) <- spawnServer
+  conn <- newConnection serverOut serverIn
+  performHandshake conn
+  cs <- newStream conn 0
+  action conn cs `finally` do
+    closeConnection conn
+    terminateProcess ph
+    void (waitForProcess ph)
 
 runTest :: Connection -> Stream -> Settings -> String
         -> (TestCase -> IO ()) -> IO TestResult
