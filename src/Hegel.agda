@@ -7,11 +7,8 @@ module Hegel where
 open import Hegel.FFI public
   using ( TestCase ; Value ; ByteString ; Pair ; pair ; fst ; snd
         ; assume ; note ; target
-        ; cborMap ; cborText ; cborInt ; cborFloat ; cborBool ; cborNull
-        ; cborList ; cborBytes ; _,ᵥ_
         ; valueToInt ; valueToFloat ; valueToBool ; valueToText
         ; valueToBytes ; valueToList
-        ; generateFromSchema
         ; runHegelTest ; runHegelTests
         )
 
@@ -46,7 +43,7 @@ open import Hegel.Generators.Collections public
         ; lists ; listsWith
         ; tuples
         ; DictOpts ; mkDictOpts ; defaultDictOpts
-        ; dicts
+        ; dicts ; dictsWith
         )
 
 -- Format generators

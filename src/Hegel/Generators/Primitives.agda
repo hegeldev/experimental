@@ -117,11 +117,23 @@ booleans = fromBasic (mkBasicGen (cborMap ((cborText "type" ,ᵥ cborText "boole
 record TextOpts : Set where
   constructor mkTextOpts
   field
-    minSize : ℕ
-    maxSize : Maybe ℕ
+    minSize            : ℕ
+    maxSize            : Maybe ℕ
+    codec              : Maybe String
+    minCodepoint       : Maybe ℕ
+    maxCodepoint       : Maybe ℕ
+    categories         : Maybe (List String)
+    excludeCategories  : Maybe (List String)
+    includeCharacters  : Maybe String
+    excludeCharacters  : Maybe String
 
 defaultTextOpts : TextOpts
-defaultTextOpts = mkTextOpts 0 nothing
+defaultTextOpts = mkTextOpts 0 nothing nothing nothing nothing nothing nothing nothing nothing
+
+-- Helper for list-of-string schema fields
+addOptStrList : String → Maybe (List String) → List (Pair Value Value) → List (Pair Value Value)
+addOptStrList _ nothing  fields = fields
+addOptStrList k (just vs) fields = (cborText k ,ᵥ cborList (map cborText vs)) ∷ fields
 
 textSchema : TextOpts → Value
 textSchema opts = cborMap fields
@@ -129,7 +141,15 @@ textSchema opts = cborMap fields
     open TextOpts opts
     fields = (cborText "type" ,ᵥ cborText "string")
            ∷ (cborText "min_size" ,ᵥ cborInt (+ minSize))
-           ∷ addOpt "max_size" (Data.Maybe.Base.map (cborInt ∘ +_) maxSize) []
+           ∷ addOpt "max_size" (Data.Maybe.Base.map (cborInt ∘ +_) maxSize)
+             (addOpt "codec" (Data.Maybe.Base.map cborText codec)
+             (addOpt "min_codepoint" (Data.Maybe.Base.map (cborInt ∘ +_) minCodepoint)
+             (addOpt "max_codepoint" (Data.Maybe.Base.map (cborInt ∘ +_) maxCodepoint)
+             (addOptStrList "categories" categories
+             (addOptStrList "exclude_categories" excludeCategories
+             (addOpt "include_characters" (Data.Maybe.Base.map cborText includeCharacters)
+             (addOpt "exclude_characters" (Data.Maybe.Base.map cborText excludeCharacters)
+             [])))))))
 
 parseText : Value → String
 parseText v with valueToText v

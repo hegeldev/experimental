@@ -69,23 +69,26 @@ open import Data.List.Base using (List; []; _∷_)
 open import Data.Integer.Base using (ℤ; +_)
 open import Data.Unit.Base using (⊤; tt)
 open import IO.Primitive.Core as Prim using (IO; _>>=_; pure)
-open import Hegel.FFI
+open import Hegel
 
 -- Test: generate bounded integers
 testIntegers : TestCase → Prim.IO ⊤
 testIntegers tc =
-  generateFromSchema tc
-    (cborMap
-      ( (cborText "type"      ,ᵥ cborText "integer")
-      ∷ (cborText "min_value" ,ᵥ cborInt (+ 0))
-      ∷ (cborText "max_value" ,ᵥ cborInt (+ 100))
-      ∷ []))
-  Prim.>>= λ _ → Prim.pure tt
+  draw tc (integersIn (+ 0) (+ 100)) Prim.>>= λ _ →
+  Prim.pure tt
+
+-- Test: lists of booleans
+testLists : TestCase → Prim.IO ⊤
+testLists tc =
+  draw tc (lists booleans) Prim.>>= λ _ →
+  Prim.pure tt
 
 main : Prim.IO ⊤
 main =
   runHegelTests
-    ((pair "integers" testIntegers) ∷ [])
+    ( (pair "integers" testIntegers)
+    ∷ (pair "lists" testLists)
+    ∷ [])
   Prim.>>= λ _ → Prim.pure tt
 ```
 

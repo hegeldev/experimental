@@ -57,9 +57,10 @@ record ListOpts : Set where
   field
     minSize : ℕ
     maxSize : Maybe ℕ
+    unique  : Maybe Bool
 
 defaultListOpts : ListOpts
-defaultListOpts = mkListOpts 0 nothing
+defaultListOpts = mkListOpts 0 nothing nothing
 
 lists : {A : Set} → Generator A → Generator (List A)
 lists {A} elemGen with Generator.asBasic elemGen
@@ -86,11 +87,15 @@ listsWith {A} opts elemGen with Generator.asBasic elemGen
 ... | just elemBg = fromBasic (mkBasicGen schema transform)
   where
     open ListOpts opts
+    addOptBool : String → Maybe Bool → List (Pair Value Value) → List (Pair Value Value)
+    addOptBool _ nothing  fields = fields
+    addOptBool k (just v) fields = (cborText k ,ᵥ cborBool v) ∷ fields
     schema = cborMap
       ( (cborText "type"     ,ᵥ cborText "list")
       ∷ (cborText "elements" ,ᵥ BasicGenerator.schema elemBg)
       ∷ (cborText "min_size" ,ᵥ cborInt (+ minSize))
-      ∷ addOpt "max_size" (Data.Maybe.Base.map (cborInt ∘ +_) maxSize) [])
+      ∷ addOpt "max_size" (Data.Maybe.Base.map (cborInt ∘ +_) maxSize)
+        (addOptBool "unique" unique []))
     transform : Value → List A
     transform v with valueToList v
     ... | just vs = map (BasicGenerator.transform elemBg) vs
@@ -162,6 +167,33 @@ dicts {K} {V} keyGen valGen with Generator.asBasic keyGen | Generator.asBasic va
 ... | _ | _ = composite (λ tc →
     startSpan tc Labels.MAP Prim.>>= λ _ →
     newCollection tc 0 nothing Prim.>>= λ _ →
+    collectDict (Generator.generate keyGen) (Generator.generate valGen) tc [] Prim.>>= λ result →
+    stopSpan tc false Prim.>>= λ _ →
+    Prim.pure result)
+
+dictsWith : {K V : Set} → DictOpts → Generator K → Generator V → Generator (List (K × V))
+dictsWith {K} {V} opts keyGen valGen with Generator.asBasic keyGen | Generator.asBasic valGen
+... | just bgK | just bgV = fromBasic (mkBasicGen schema transform)
+  where
+    open DictOpts opts
+    schema = cborMap
+      ( (cborText "type"   ,ᵥ cborText "dict")
+      ∷ (cborText "keys"   ,ᵥ BasicGenerator.schema bgK)
+      ∷ (cborText "values" ,ᵥ BasicGenerator.schema bgV)
+      ∷ (cborText "min_size" ,ᵥ cborInt (+ minSize))
+      ∷ addOpt "max_size" (Data.Maybe.Base.map (cborInt ∘ +_) maxSize) [])
+    parsePair : Value → K × V
+    parsePair v with valueToList v
+    ... | just (kv ∷ vv ∷ _) = BasicGenerator.transform bgK kv , BasicGenerator.transform bgV vv
+    ... | _ = BasicGenerator.transform bgK v , BasicGenerator.transform bgV v
+    transform : Value → List (K × V)
+    transform v with valueToList v
+    ... | just pairs = map parsePair pairs
+    ... | nothing    = []
+... | _ | _ = composite (λ tc →
+    let open DictOpts opts in
+    startSpan tc Labels.MAP Prim.>>= λ _ →
+    newCollection tc minSize maxSize Prim.>>= λ _ →
     collectDict (Generator.generate keyGen) (Generator.generate valGen) tc [] Prim.>>= λ result →
     stopSpan tc false Prim.>>= λ _ →
     Prim.pure result)

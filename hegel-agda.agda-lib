@@ -2,6 +2,7 @@ name: hegel-agda
 include:
   src
   test
+  conformance
 depend:
   standard-library
 flags:

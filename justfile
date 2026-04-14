@@ -1,8 +1,9 @@
 # hegel-agda justfile
 
 ghc_env := env("GHC_ENV", ".ghc.environment." + `uname -m` + "-linux-" + `ghc --numeric-version 2>/dev/null || echo "9.6.7"`)
+agda_compile := "agda --compile --ghc-flag=\"-i" + justfile_directory() + "/hs-support\" --ghc-flag=\"-package-env " + justfile_directory() + "/" + ghc_env + "\" --compile-dir=" + justfile_directory() + "/build"
 
-# Build the Haskell FFI library and conformance binaries
+# Build the Haskell FFI library and protocol test
 build-hs:
     cabal build all
 
@@ -14,33 +15,38 @@ check-agda:
     agda src/Hegel/Generators/Primitives.agda
     agda src/Hegel/Generators/Collections.agda
     agda src/Hegel/Generators/Format.agda
+    agda src/Hegel/Conformance.agda
     agda src/Hegel.agda
 
 # Compile and run the Agda test suites
 test: build-hs
-    agda --compile \
-        --ghc-flag="-i{{justfile_directory()}}/hs-support" \
-        --ghc-flag="-package-env {{justfile_directory()}}/{{ghc_env}}" \
-        --compile-dir={{justfile_directory()}}/build \
-        test/TestBasic.agda
+    {{agda_compile}} test/TestBasic.agda
     ./build/TestBasic
-    agda --compile \
-        --ghc-flag="-i{{justfile_directory()}}/hs-support" \
-        --ghc-flag="-package-env {{justfile_directory()}}/{{ghc_env}}" \
-        --compile-dir={{justfile_directory()}}/build \
-        test/TestGenerators.agda
+    {{agda_compile}} test/TestGenerators.agda
     ./build/TestGenerators
 
 # Run the Haskell protocol test
 test-protocol: build-hs
     cabal run test-protocol
 
-# Run conformance tests
-conformance: build-hs
+# Compile all Agda conformance binaries
+build-conformance:
+    {{agda_compile}} conformance/TestBooleans.agda
+    {{agda_compile}} conformance/TestIntegers.agda
+    {{agda_compile}} conformance/TestFloats.agda
+    {{agda_compile}} conformance/TestText.agda
+    {{agda_compile}} conformance/TestBinary.agda
+    {{agda_compile}} conformance/TestSampledFrom.agda
+    {{agda_compile}} conformance/TestLists.agda
+    {{agda_compile}} conformance/TestDicts.agda
+    {{agda_compile}} conformance/TestErrorHandling.agda
+
+# Run conformance tests (uses Agda-compiled binaries)
+conformance: build-conformance
     python3 -m pytest test_conformance.py -v --tb=short
 
-# Coverage: Agda compiles to Haskell via GHC backend. Native Agda coverage
-# tooling doesn't exist. We verify coverage by running all tests and conformance.
+# Coverage: Agda has no native code coverage tooling.
+# We verify coverage by running all tests and conformance.
 # The type checker provides stronger guarantees than coverage in most languages.
 coverage: test conformance
     @echo "Coverage: all tests and conformance tests passed."

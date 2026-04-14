@@ -1,5 +1,9 @@
-"""Conformance tests for hegel-agda."""
-import subprocess
+"""Conformance tests for hegel-agda.
+
+These tests exercise the Agda generator library (not raw CBOR schemas).
+Each conformance binary is an Agda program compiled via agda --compile
+that uses the Hegel generator API (draw, integers, booleans, lists, etc.).
+"""
 from pathlib import Path
 
 from hegel.conformance import (
@@ -20,39 +24,30 @@ from hegel.conformance import (
     run_conformance_tests,
 )
 
-
-def find_exe(name):
-    result = subprocess.run(
-        ["cabal", "list-bin", name],
-        capture_output=True, text=True
-    )
-    if result.returncode == 0:
-        return Path(result.stdout.strip())
-    raise FileNotFoundError(f"Cannot find executable: {name}")
-
+BUILD_DIR = Path(__file__).parent / "build"
 
 INT_MIN = -(2**63)
 INT_MAX = 2**63 - 1
 
 
 def test_conformance(subtests):
-    error_handling_bin = find_exe("test_error_handling")
+    error_handling_bin = BUILD_DIR / "TestErrorHandling"
 
     run_conformance_tests(
         [
-            BooleanConformance(find_exe("test_booleans")),
+            BooleanConformance(BUILD_DIR / "TestBooleans"),
             IntegerConformance(
-                find_exe("test_integers"), min_value=INT_MIN, max_value=INT_MAX
+                BUILD_DIR / "TestIntegers", min_value=INT_MIN, max_value=INT_MAX
             ),
-            FloatConformance(find_exe("test_floats")),
-            TextConformance(find_exe("test_text")),
-            BinaryConformance(find_exe("test_binary")),
+            FloatConformance(BUILD_DIR / "TestFloats"),
+            TextConformance(BUILD_DIR / "TestText"),
+            BinaryConformance(BUILD_DIR / "TestBinary"),
             ListConformance(
-                find_exe("test_lists"), min_value=INT_MIN, max_value=INT_MAX
+                BUILD_DIR / "TestLists", min_value=INT_MIN, max_value=INT_MAX
             ),
-            SampledFromConformance(find_exe("test_sampled_from")),
+            SampledFromConformance(BUILD_DIR / "TestSampledFrom"),
             DictConformance(
-                find_exe("test_dicts"),
+                BUILD_DIR / "TestDicts",
                 min_key=INT_MIN,
                 max_key=INT_MAX,
                 min_value=INT_MIN,

@@ -15,8 +15,13 @@ module Conformance
   , paramBool
   , paramIntList
   , paramString
+  , paramStringList
   , lookupParam
   , JVal(..)
+  -- Agda FFI support
+  , MetricsWriter(..)
+  , writeMetricStr
+  , runConformanceAgda
   ) where
 
 import HegelFFI
@@ -190,6 +195,11 @@ paramString k ps = case lookupParam k ps of
   Just (JStr s) -> Just s
   _             -> Nothing
 
+paramStringList :: String -> Params -> Maybe [String]
+paramStringList k ps = case lookupParam k ps of
+  Just (JArr vs) -> Just [s | JStr s <- vs]
+  _              -> Nothing
+
 -- | Run a conformance test. Takes a function that receives TestCase, params, and metrics writer.
 runConformance :: (TestCase -> Params -> (String -> IO ()) -> IO ()) -> IO ()
 runConformance testFn = do
@@ -214,3 +224,19 @@ runConformance testFn = do
   case mh of
     Just h  -> hClose h
     Nothing -> pure ()
+
+-- ============================================================================
+-- Agda FFI support
+-- ============================================================================
+
+-- | Opaque wrapper for the metrics writer function, used by Agda FFI.
+newtype MetricsWriter = MetricsWriter (String -> IO ())
+
+-- | Write a metric string via the wrapped writer.
+writeMetricStr :: MetricsWriter -> String -> IO ()
+writeMetricStr (MetricsWriter f) s = f s
+
+-- | Run a conformance test with an Agda-friendly callback signature.
+runConformanceAgda :: (TestCase -> Params -> MetricsWriter -> IO ()) -> IO ()
+runConformanceAgda testFn = runConformance $ \tc params writer ->
+  testFn tc params (MetricsWriter writer)
