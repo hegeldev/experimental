@@ -36,7 +36,7 @@ src/main/java/dev/hegel/
 
 src/test/java/dev/hegel/
 ├── BasicIntegrationTest.java       # Core integration tests (real server)
-├── CoverageIntegrationTest.java    # Additional tests targeting uncovered paths
+├── GeneratorIntegrationTest.java   # Integration tests for all generator types and combinators
 ├── GeneratorUnitTest.java          # Generator unit tests using MockDataSource
 ├── HegelUnitTest.java              # Hegel.java internal method unit tests
 ├── ServerDataSourceTest.java       # ServerDataSource error path unit tests

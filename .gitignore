@@ -5,10 +5,13 @@ target/
 *.war
 .idea/
 *.iml
+.vscode/
 .settings/
 .classpath
 .project
 bin/
 .hypothesis/
 .pytest_cache/
-.claude/
+# Exclude all .claude/ files except the project guide
+.claude/*
+!.claude/CLAUDE.md

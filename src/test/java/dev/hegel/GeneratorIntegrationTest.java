@@ -9,11 +9,11 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * Integration tests targeting uncovered code paths. All tests use the real hegel-core server.
- * Exercises format generators, combinators, non-basic generator paths, error injection, and various
- * Settings configurations.
+ * Integration tests for all generator types and combinators. All tests use the real hegel-core
+ * server. Exercises format generators, combinators, non-basic generator paths, error injection, and
+ * various Settings configurations.
  */
-class CoverageIntegrationTest {
+class GeneratorIntegrationTest {
 
   // -----------------------------------------------------------------------
   // Binary generator
@@ -447,8 +447,9 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String url = tc.draw(urls());
-          assertNotNull(url);
-          assertFalse(url.isEmpty());
+          assertTrue(
+              url.startsWith("http://") || url.startsWith("https://"),
+              "Expected http/https URL: " + url);
         });
   }
 
@@ -459,8 +460,8 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String domain = tc.draw(domains());
-          assertNotNull(domain);
-          assertFalse(domain.isEmpty());
+          assertTrue(domain.contains("."), "Expected domain with TLD: " + domain);
+          assertFalse(domain.startsWith("."), "Domain should not start with dot: " + domain);
         });
   }
 
@@ -471,7 +472,8 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String ip = tc.draw(ipv4Addresses());
-          assertTrue(ip.contains("."), "Expected dotted IPv4: " + ip);
+          assertTrue(
+              ip.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"), "Invalid IPv4: " + ip);
         });
   }
 
@@ -482,7 +484,7 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String ip = tc.draw(ipv6Addresses());
-          assertNotNull(ip);
+          assertTrue(ip.contains(":"), "Expected colon-separated IPv6: " + ip);
         });
   }
 
@@ -493,7 +495,8 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String ip = tc.draw(ipAddresses());
-          assertNotNull(ip);
+          // Either dotted decimal (IPv4) or colon-separated (IPv6)
+          assertTrue(ip.contains(".") || ip.contains(":"), "Expected IP address format: " + ip);
         });
   }
 
@@ -504,8 +507,8 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String date = tc.draw(dates());
-          assertNotNull(date);
-          assertFalse(date.isEmpty());
+          // ISO 8601: YYYY-MM-DD
+          assertTrue(date.matches("\\d{4}-\\d{2}-\\d{2}"), "Expected ISO 8601 date: " + date);
         });
   }
 
@@ -516,7 +519,8 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String time = tc.draw(times());
-          assertNotNull(time);
+          // ISO 8601 time: HH:MM:SS...
+          assertTrue(time.contains(":"), "Expected colon-separated time: " + time);
         });
   }
 
@@ -527,7 +531,10 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String dt = tc.draw(datetimes());
-          assertNotNull(dt);
+          // ISO 8601 datetime: contains date separator T
+          assertTrue(
+              dt.contains("T") || dt.contains(" "), "Expected datetime with separator: " + dt);
+          assertTrue(dt.contains("-"), "Expected date portion with dashes: " + dt);
         });
   }
 
@@ -538,9 +545,11 @@ class CoverageIntegrationTest {
         Settings.builder().testCases(20).build(),
         tc -> {
           String s = tc.draw(fromRegex("[a-z]{3}"));
-          // Without fullmatch the server may generate strings containing the pattern
+          // Without fullmatch, hegel-core generates a string that contains the pattern.
+          // Python's regex is Unicode-aware, so generated chars may not be ASCII; just
+          // verify the string is non-null and has at least the 3-character minimum.
           assertNotNull(s);
-          assertFalse(s.isEmpty());
+          assertTrue(s.length() >= 3, "Expected at least 3 chars from [a-z]{3}: " + s);
         });
   }
 
