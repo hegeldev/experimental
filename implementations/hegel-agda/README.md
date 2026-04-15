@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+>
+> This library was written entirely by an AI agent (Claude) running under a custom development
+> harness, with minimal to no human supervision during its creation. We expect it probably works,
+> but it may in fact be extremely bad in ways we would not know about, because we have not
+> meaningfully reviewed it. Please treat it with appropriate scepticism and caution.
+
 > [!NOTE]
 > This is a Claude-written implementation of a Hegel library for Agda.
 > It was created as an experiment in bringing property-based testing to

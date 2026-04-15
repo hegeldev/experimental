@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+>
+> This library was written entirely by an AI agent (Claude) running under a custom development
+> harness, with minimal to no human supervision during its creation. We expect it probably works,
+> but it may in fact be extremely bad in ways we would not know about, because we have not
+> meaningfully reviewed it. Please treat it with appropriate scepticism and caution.
+
 > **Beta notice:** hegel-java is in early development. Bugs and API changes are expected. Please report issues at https://github.com/hegeldev/hegel-java/issues.
 
 > **Note:** This implementation was generated with the assistance of Claude (claude-sonnet-4-6) and has not been extensively used in production. Please report issues.

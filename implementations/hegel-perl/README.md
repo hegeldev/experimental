@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+>
+> This library was written entirely by an AI agent (Claude) running under a custom development
+> harness, with minimal to no human supervision during its creation. We expect it probably works,
+> but it may in fact be extremely bad in ways we would not know about, because we have not
+> meaningfully reviewed it. Please treat it with appropriate scepticism and caution.
+
 > [!NOTE]
 > This is a Claude-authored implementation, created as a test of the
 > [Hegel implementation guide](https://github.com/hegeldev/hegel-book).
