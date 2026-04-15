@@ -209,8 +209,7 @@ public final class Generators {
                 if (node.isNull()) return Double.NaN;
                 if (node.isFloatingPointNumber()) return node.doubleValue();
                 if (node.isIntegralNumber()) return (double) node.longValue();
-                double v = node.asDouble();
-                return v;
+                return node.asDouble();
               }));
     }
   }
