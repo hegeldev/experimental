@@ -1,0 +1,26 @@
+# Racket compiled bytecode
+compiled/
+*/compiled/
+
+# Racket coverage artifacts
+coverage/
+.coverage/
+
+# Hegel server logs
+.hegel/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.hypothesis/
+
+# Editor
+.DS_Store
+*.swp
+*~
+
+# Claude Code internal files (keep CLAUDE.md)
+.claude/*
+!.claude/CLAUDE.md
