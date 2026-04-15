@@ -1,0 +1,38 @@
+# Build outputs
+build/
+dist-newstyle/
+_build/
+
+# Agda build artifacts
+*.agdai
+MAlonzo/
+
+# Haskell artifacts
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+
+# Hegel server data
+.hegel/
+
+# Hypothesis database
+.hypothesis/
+
+# Python cache
+__pycache__/
+.pytest_cache/
+
+# GHC environment (local to machine)
+.ghc.environment.*
+
+# Editor files
+*~
+.#*
+\#*#
+
+# Backup files
+*.bak
+
+# OS files
+.DS_Store
