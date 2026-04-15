@@ -3,6 +3,7 @@ package dev.hegel;
 import static dev.hegel.generators.Generators.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -129,6 +130,20 @@ class BasicIntegrationTest {
           double x = tc.draw(floats().minValue(0.0).maxValue(1.0));
           assertTrue(x >= 0.0 && x <= 1.0);
         });
+  }
+
+  @Test
+  void shrinkingFindsMinimalCounterexample() {
+    // The minimal list with a duplicate is [0, 0].
+    // Verify that shrinking converges to this specific example.
+    List<Long> minimal =
+        HegelTestUtils.minimal(
+            lists(integers(-5, 5)).minSize(2),
+            xs -> new HashSet<>(xs).size() < xs.size() // has duplicates
+            );
+    assertEquals(2, minimal.size(), "Minimal duplicate list should have 2 elements");
+    assertEquals(minimal.get(0), minimal.get(1), "Both elements should be equal");
+    assertEquals(0L, minimal.get(0), "Minimal element with duplicates should be 0");
   }
 
   // -----------------------------------------------------------------------
