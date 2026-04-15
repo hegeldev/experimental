@@ -12,6 +12,8 @@ target/
 bin/
 .hypothesis/
 .pytest_cache/
+__pycache__/
+*.pyc
 # Exclude all .claude/ files except the project guide
 .claude/*
 !.claude/CLAUDE.md
