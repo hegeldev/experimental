@@ -118,7 +118,8 @@ void additionLooksPositive() {
     Hegel.test("sum of two positives is larger", tc -> {
         long x = tc.draw(integers(1, Long.MAX_VALUE));
         long y = tc.draw(integers(1, Long.MAX_VALUE));
-        assertTrue(x + y > x, "sum should grow"); // overflows!
+        // x + y overflows when y = Long.MAX_VALUE
+        assertTrue(x + y > x, x + " + " + y + " should grow");
     });
 }
 ```
@@ -126,8 +127,7 @@ void additionLooksPositive() {
 Hegel finds the bug and shrinks it to its simplest form:
 
 ```
-AssertionError: sum should grow
-Falsifying example: x=1, y=9223372036854775807
+AssertionError: 1 + 9223372036854775807 should grow
 ```
 
 The shrunk example uses the smallest `x` (1) that exposes the overflow. Hegel found a large pair first, then shrunk until it found the minimal case.
