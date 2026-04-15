@@ -1,0 +1,4 @@
+{
+  "nocov_count": 0,
+  "description": "Count of lines excluded from coverage via nocov annotations. This number must not increase without explicit review."
+}

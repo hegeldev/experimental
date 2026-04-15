@@ -1,0 +1,3 @@
+#!/bin/bash
+DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+exec perl -I"$DIR/lib" -I"$HOME/perl5/lib/perl5" "$DIR/conformance/lib/run_lists.pl" "$@"

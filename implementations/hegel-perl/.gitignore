@@ -1,0 +1,7 @@
+.hegel/
+cover_db/
+*.bak
+*.swp
+.hypothesis/
+__pycache__/
+.pytest_cache/
