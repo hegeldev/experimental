@@ -75,7 +75,8 @@
 (require "test-case.rkt"
          "runner.rkt"
          "generators/main.rkt"
-         "session.rkt")
+         "session.rkt"
+         "test-utils.rkt")
 
 (provide
  ;; Test runner
@@ -147,4 +148,10 @@
  ;; DataSource (for testing)
  make-data-source
  data-source?
- make-test-case)
+ make-test-case
+
+ ;; Test utilities
+ assert-all-examples
+ assert-no-examples
+ find-any
+ minimal)

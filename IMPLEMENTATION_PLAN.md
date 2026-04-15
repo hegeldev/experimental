@@ -89,7 +89,8 @@ Implement a Hegel property-based testing library in Racket.
 - [x] LICENSE file (MIT)
 - [x] .claude/CLAUDE.md
 - [x] .gitignore covers build artifacts
-- [x] All tests passing (216 tests)
+- [x] Test utilities (assert-all-examples, assert-no-examples, find-any, minimal) in test-utils.rkt
+- [x] All tests passing
 - [x] All conformance tests passing (14/14)
 - [x] `just coverage` passes with 100% library coverage
 - [x] `just check` passes

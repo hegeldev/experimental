@@ -296,6 +296,33 @@ Inside `run-hegel`, you receive a test case `tc` that you use to draw generated 
  #:suppress-health-check '("filter_too_much"))
 ```
 
+## Test Utilities
+
+`test-utils.rkt` provides helpers for asserting properties of generators — useful when writing tests for code that uses Hegel:
+
+```racket
+(require hegel)
+
+;; Assert every generated value satisfies a predicate
+(assert-all-examples (integers #:min-value 0 #:max-value 100)
+                     (lambda (n) (and (>= n 0) (<= n 100))))
+
+;; Assert no generated value satisfies a predicate
+(assert-no-examples (integers #:min-value 0 #:max-value 10)
+                    negative?)
+
+;; Find any value satisfying a predicate (returns it, or raises if none found)
+(define found (find-any (integers #:min-value -100 #:max-value 100)
+                        (lambda (n) (> n 50))))
+
+;; Find the minimal value satisfying a predicate (via shrinking)
+(define v (minimal (integers #:min-value 0 #:max-value 1000)
+                   (lambda (n) (> n 42))))
+;; v => 43
+```
+
+Each function accepts an optional `#:test-cases` keyword (default 100).
+
 ## Development
 
 ```bash

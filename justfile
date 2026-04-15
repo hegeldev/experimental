@@ -9,6 +9,7 @@ test:
 coverage:
     raco cover \
         protocol.rkt connection.rkt runner.rkt test-case.rkt session.rkt conformance.rkt \
+        test-utils.rkt \
         generators/core.rkt generators/numeric.rkt generators/strings.rkt \
         generators/misc.rkt generators/collections.rkt generators/format.rkt \
         tests/test-protocol.rkt \
@@ -17,7 +18,8 @@ coverage:
         tests/test-generators.rkt \
         tests/test-session.rkt \
         tests/test-conformance-helpers.rkt \
-        tests/test-integration.rkt
+        tests/test-integration.rkt \
+        tests/test-utils.rkt
     @python3 coverage-check.py
 
 # Run conformance tests
@@ -33,15 +35,17 @@ conformance:
 format:
     raco expand \
         protocol.rkt connection.rkt runner.rkt test-case.rkt session.rkt conformance.rkt \
+        test-utils.rkt \
         generators/core.rkt generators/numeric.rkt generators/strings.rkt \
         generators/misc.rkt generators/collections.rkt generators/format.rkt \
         main.rkt > /dev/null
 
 # Lint: check that all files compile cleanly
 lint:
-    raco make main.rkt conformance.rkt \
+    raco make main.rkt conformance.rkt test-utils.rkt \
         tests/test-protocol.rkt tests/test-connection.rkt tests/test-runner.rkt \
         tests/test-generators.rkt tests/test-session.rkt tests/test-conformance-helpers.rkt \
+        tests/test-utils.rkt \
         conformance/test_booleans.rkt conformance/test_integers.rkt \
         conformance/test_floats.rkt conformance/test_text.rkt \
         conformance/test_binary.rkt conformance/test_sampled_from.rkt \

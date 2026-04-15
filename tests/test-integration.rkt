@@ -282,6 +282,25 @@
               (check-true (odd? k))))
           #:test-cases 10))))
 
+    (test-case "non-basic hashmap duplicate key rejection"
+      ;; Covers the (hash-has-key? result k) duplicate-key branch in hashmaps-non-basic.
+      ;; Uses a filtered key gen with only 2 possible values and min-size 3,
+      ;; guaranteeing that duplicates must occur (pigeonhole principle).
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            ;; Only 2 possible odd values (1, 3), min-size 3 -> must generate a duplicate key
+            (define key-gen (generator-filter (integers #:min-value 1 #:max-value 3) odd?))
+            (define hmap (draw tc (hashmaps key-gen (integers #:min-value 0)
+                                            #:min-size 3 #:max-size 5)))
+            (check-true (hash? hmap))
+            ;; All keys must be odd
+            (for ([k (hash-keys hmap)])
+              (check-true (odd? k))))
+          #:test-cases 10
+          #:suppress-health-check '("filter_too_much")))))
+
     (test-case "mock server: health_check_failure raises error"
       ;; Covers (when (hash-ref result-data "health_check_failure" #f) ...) in run-hegel
       (reset-session-for-testing!)
