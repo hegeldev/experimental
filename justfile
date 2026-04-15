@@ -2,9 +2,9 @@
 
 JAR := "target/hegel-java-0.1.0-SNAPSHOT-jar-with-dependencies.jar"
 
-# Run tests with JaCoCo coverage enforcement
+# Run tests with JaCoCo coverage enforcement (clean build to avoid stale .exec data)
 coverage:
-    mvn verify -Dsurefire.failIfNoSpecifiedTests=false
+    mvn clean verify -Dsurefire.failIfNoSpecifiedTests=false
 
 # Run tests only (without coverage check)
 test:
