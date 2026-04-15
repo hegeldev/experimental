@@ -7,9 +7,9 @@
 > This repository contains code that we think is worth sharing but don't guarantee the quality
 > or reliability of.
 > 
-> You are welcome to report issues with us anyway, and please talk to us about it if there's any of
-> it you want to use seriously, but we genuinely make no guarantees that we will support anything in
-> here or do anything with your feedback.
+> You are welcome to report issues with it anyway, and please talk to us if there's anything in here
+> that you want to use seriously, but as long as code lives in here we don't intend to put any
+> meaningful amount of effort into supporting it.
 
 In particular it contains a lot of hegel client libraries of various degrees of quality that we
 don't currently intend to support, primarily ones which have been produced in the course of testing
