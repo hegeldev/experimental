@@ -20,4 +20,7 @@ __pycache__/
 .DS_Store
 *.swp
 *~
-.claude/review-complete
+
+# Claude Code internal files (keep CLAUDE.md)
+.claude/*
+!.claude/CLAUDE.md
