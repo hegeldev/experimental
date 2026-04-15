@@ -503,6 +503,150 @@
                   (check-pred integer? x))
                 #:test-cases 5)))))
         (lambda ()
-          (reset-session-for-testing!)))))))
+          (reset-session-for-testing!))))
+
+    ;; ------------------------------------------------------------------
+    ;; Generators without prior integration tests
+    ;; ------------------------------------------------------------------
+
+    (test-case "just generator always returns given value"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define v (draw tc (just 42)))
+            (check-equal? v 42))
+          #:test-cases 5))))
+
+    (test-case "tuples generator returns fixed-length list"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define t (draw tc (tuples (integers #:min-value 0) (text) (booleans))))
+            (check-true (list? t))
+            (check-equal? (length t) 3)
+            (check-pred integer? (first t))
+            (check-pred string? (second t))
+            (check-pred boolean? (third t)))
+          #:test-cases 10))))
+
+    (test-case "optional generator returns #f or integer"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define v (draw tc (optional (integers #:min-value 0 #:max-value 100))))
+            (check-true (or (equal? v #f) (and (integer? v) (<= 0 v 100)))))
+          #:test-cases 20))))
+
+    (test-case "generator-flat-map uses prior draw to configure next"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define gen
+              (generator-flat-map
+               (integers #:min-value 1 #:max-value 5)
+               (lambda (n) (lists (integers #:min-value 0) #:min-size n #:max-size n))))
+            (define lst (draw tc gen))
+            (check-true (and (>= (length lst) 1) (<= (length lst) 5))))
+          #:test-cases 10))))
+
+    (test-case "emails generator returns a string"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define e (draw tc (emails)))
+            (check-pred string? e))
+          #:test-cases 5))))
+
+    (test-case "urls generator returns a string"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define u (draw tc (urls)))
+            (check-pred string? u))
+          #:test-cases 5))))
+
+    (test-case "domains generator returns a string"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define d (draw tc (domains)))
+            (check-pred string? d))
+          #:test-cases 5))))
+
+    (test-case "dates generator returns YYYY-MM-DD string"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define d (draw tc (dates)))
+            (check-pred string? d)
+            ;; Use #px for PCRE quantifiers
+            (check-true (regexp-match? #px"^[0-9]{4}-[0-9]{2}-[0-9]{2}$" d)))
+          #:test-cases 5))))
+
+    (test-case "times generator returns HH:MM:SS string"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define t (draw tc (times)))
+            (check-pred string? t)
+            ;; times may include fractional seconds, e.g. "21:41:27.340784"
+            (check-true (regexp-match? #px"^[0-9]{2}:[0-9]{2}:[0-9]{2}" t)))
+          #:test-cases 5))))
+
+    (test-case "datetimes generator returns ISO datetime string"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define dt (draw tc (datetimes)))
+            (check-pred string? dt)
+            ;; ISO datetime: starts with YYYY-MM-DDTHH
+            (check-true (regexp-match? #px"^[0-9]{4}-[0-9]{2}-[0-9]{2}T" dt)))
+          #:test-cases 5))))
+
+    ;; ------------------------------------------------------------------
+    ;; Shrink quality: verify failure is reported at the minimal example.
+    ;; Uses small ranges so shrinking is fast.
+    ;; ------------------------------------------------------------------
+
+    (test-case "shrinking finds minimal failing integer"
+      ;; Any integer > 0 fails. Minimal should be 1.
+      (define reported-value (box #f))
+      (check-exn
+       exn:fail?
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define x (draw tc (integers #:min-value 0 #:max-value 10)))
+            (when (> x 0)
+              (set-box! reported-value x)
+              (error "positive integer")))
+          #:test-cases 50)))
+      (check-equal? (unbox reported-value) 1))
+
+    (test-case "shrinking finds minimal failing list"
+      ;; Any non-empty list fails. Minimal should be a list of length 1.
+      (define reported-len (box #f))
+      (check-exn
+       exn:fail?
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define lst (draw tc (lists (integers #:min-value 0 #:max-value 3)
+                                        #:min-size 0 #:max-size 5)))
+            (when (not (null? lst))
+              (set-box! reported-len (length lst))
+              (error "non-empty list")))
+          #:test-cases 50)))
+      (check-equal? (unbox reported-len) 1)))))
 
 (run-tests integration-tests)
