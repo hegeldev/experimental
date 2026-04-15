@@ -811,4 +811,73 @@ class GeneratorUnitTest {
     // Duplicate 1 is rejected; final set is {1, 2, 3}
     assertEquals(java.util.Set.of(1L, 2L, 3L), result);
   }
+
+  // -----------------------------------------------------------------------
+  // Counterexample display (draw tracking + printDrawnValues)
+  // -----------------------------------------------------------------------
+
+  @Test
+  void drawTracksValuesOnFinalRun() {
+    MockDataSource ds =
+        new MockDataSource().withResponse(new LongNode(42)).withResponse(new LongNode(7));
+    TestCase tc = tcFinal(ds);
+    tc.draw(integers());
+    tc.draw(integers());
+    assertEquals(2, tc.drawnValues().size());
+    assertTrue(tc.drawnValues().get(0).contains("42"));
+    assertTrue(tc.drawnValues().get(1).contains("7"));
+  }
+
+  @Test
+  void drawDoesNotTrackOnNonFinalRun() {
+    MockDataSource ds = new MockDataSource().withResponse(new LongNode(42));
+    TestCase tc = tc(ds);
+    tc.draw(integers());
+    assertTrue(tc.drawnValues().isEmpty());
+  }
+
+  @Test
+  void drawWithLabelTracksOnFinalRun() {
+    MockDataSource ds = new MockDataSource().withResponse(new LongNode(99));
+    TestCase tc = tcFinal(ds);
+    tc.draw(integers(), "x");
+    assertEquals(1, tc.drawnValues().size());
+    assertEquals("x: 99", tc.drawnValues().get(0));
+  }
+
+  @Test
+  void drawWithLabelDoesNotTrackOnNonFinalRun() {
+    MockDataSource ds = new MockDataSource().withResponse(new LongNode(99));
+    TestCase tc = tc(ds);
+    tc.draw(integers(), "x");
+    assertTrue(tc.drawnValues().isEmpty());
+  }
+
+  @Test
+  void printDrawnValuesOutputsFormattedLines() {
+    MockDataSource ds =
+        new MockDataSource().withResponse(new LongNode(10)).withResponse(new TextNode("hello"));
+    TestCase tc = tcFinal(ds);
+    tc.draw(integers(), "n");
+    tc.draw(text());
+
+    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+    java.io.PrintStream ps = new java.io.PrintStream(baos);
+    tc.printDrawnValues(ps);
+    String output = baos.toString();
+    assertTrue(output.contains("Drawn values:"));
+    assertTrue(output.contains("  n: 10"));
+    assertTrue(output.contains("  Draw 2: hello"));
+  }
+
+  @Test
+  void printDrawnValuesEmptyWhenNoDraws() {
+    MockDataSource ds = new MockDataSource();
+    TestCase tc = tcFinal(ds);
+
+    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+    java.io.PrintStream ps = new java.io.PrintStream(baos);
+    tc.printDrawnValues(ps);
+    assertEquals("", baos.toString());
+  }
 }

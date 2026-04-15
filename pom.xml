@@ -35,7 +35,13 @@
             <version>${jackson.version}</version>
         </dependency>
 
-        <!-- JUnit 5 -->
+        <!-- JUnit 5 API (compile scope: users need @HegelTest + HegelExtension) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+        </dependency>
+        <!-- JUnit 5 engine + full runtime (test scope: for running our own tests) -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

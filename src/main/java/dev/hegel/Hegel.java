@@ -224,6 +224,7 @@ public class Hegel {
 
       if (isFinal) {
         System.err.println();
+        tc.printDrawnValues(System.err);
         System.err.println(e.getMessage());
         e.printStackTrace(System.err);
       }

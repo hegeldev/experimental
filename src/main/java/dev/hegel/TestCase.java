@@ -1,6 +1,9 @@
 package dev.hegel;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A handle to the current test case.
@@ -25,6 +28,7 @@ public class TestCase {
 
   private final DataSource dataSource;
   private final boolean isFinalRun;
+  private final List<String> draws = new ArrayList<>();
 
   TestCase(DataSource dataSource, boolean isFinalRun) {
     this.dataSource = dataSource;
@@ -43,7 +47,30 @@ public class TestCase {
    * @return the generated value
    */
   public <T> T draw(Generator<T> generator) {
-    return generator.generate(this);
+    T value = generator.generate(this);
+    if (isFinalRun) {
+      draws.add("Draw " + (draws.size() + 1) + ": " + value);
+    }
+    return value;
+  }
+
+  /**
+   * Draw a value from a generator with a descriptive label.
+   *
+   * <p>The label appears in the counterexample display when a test fails. For example, {@code
+   * tc.draw(integers(), "x")} will print {@code x: 42} in the failure output.
+   *
+   * @param generator the generator to draw from
+   * @param label a descriptive name for this drawn value
+   * @param <T> the type of value to draw
+   * @return the generated value
+   */
+  public <T> T draw(Generator<T> generator, String label) {
+    T value = generator.generate(this);
+    if (isFinalRun) {
+      draws.add(label + ": " + value);
+    }
+    return value;
   }
 
   /**
@@ -130,5 +157,20 @@ public class TestCase {
 
   boolean isFinalRun() {
     return isFinalRun;
+  }
+
+  /** Print drawn values to the given stream (used for counterexample display on failure). */
+  void printDrawnValues(PrintStream out) {
+    if (!draws.isEmpty()) {
+      out.println("Drawn values:");
+      for (String entry : draws) {
+        out.println("  " + entry);
+      }
+    }
+  }
+
+  /** Return the list of drawn value descriptions (for testing). */
+  List<String> drawnValues() {
+    return draws;
   }
 }

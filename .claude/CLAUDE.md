@@ -20,10 +20,12 @@ The check is configured in `pom.xml` under the `jacoco-maven-plugin` check execu
 ```
 src/main/java/dev/hegel/
 ├── Hegel.java              # Entry point + event loop
+├── HegelTest.java          # @HegelTest JUnit 5 annotation
+├── HegelExtension.java     # JUnit 5 extension (powers @HegelTest)
 ├── Session.java            # Subprocess management + Connection lifecycle
 ├── ServerDataSource.java   # Protocol-backed DataSource
 ├── DataSource.java         # Interface for test operations
-├── TestCase.java           # Handle passed to test functions
+├── TestCase.java           # Handle passed to test functions (tracks drawn values)
 ├── BasicGenerator.java     # Schema-composed generator
 ├── Generator.java          # Generator interface + default combinators
 ├── Settings.java           # Settings builder + CI detection
@@ -38,6 +40,8 @@ src/test/java/dev/hegel/
 ├── BasicIntegrationTest.java       # Core integration tests (real server)
 ├── GeneratorIntegrationTest.java   # Integration tests for all generator types and combinators
 ├── GeneratorUnitTest.java          # Generator unit tests using MockDataSource
+├── HegelTestAnnotationTest.java    # @HegelTest annotation + HegelExtension tests
+├── HegelTestUtilsTest.java         # HegelTestUtils (assertAllExamples, findAny, minimal) tests
 ├── HegelUnitTest.java              # Hegel.java internal method unit tests
 ├── ServerDataSourceTest.java       # ServerDataSource error path unit tests
 ├── SessionTest.java                # Session protocol + handshake unit tests

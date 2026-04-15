@@ -57,18 +57,17 @@ static <T extends Comparable<T>> List<T> badSort(List<T> list) {
 Write a property test that checks that sorting preserves the element count:
 
 ```java
-import dev.hegel.Hegel;
+import dev.hegel.HegelTest;
+import dev.hegel.TestCase;
 import static dev.hegel.generators.Generators.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@Test
-void sortPreservesLength() {
-    Hegel.test("sort preserves length", tc -> {
-        List<Long> xs = tc.draw(lists(integers(-10, 10)));
-        List<Long> sorted = badSort(xs);
-        assertTrue(xs.size() == sorted.size(),
-            "Sort must not lose elements: " + xs + " -> " + sorted);
-    });
+@HegelTest
+void sortPreservesLength(TestCase tc) {
+    List<Long> xs = tc.draw(lists(integers(-10, 10)));
+    List<Long> sorted = badSort(xs);
+    assertTrue(xs.size() == sorted.size(),
+        "Sort must not lose elements: " + xs + " -> " + sorted);
 }
 ```
 
@@ -78,9 +77,11 @@ Run with Maven:
 mvn test
 ```
 
-Hegel finds the bug and shrinks the failing case to its minimal form:
+Hegel finds the bug and shrinks the failing case to its minimal form. The failure output shows every drawn value:
 
 ```
+Drawn values:
+  Draw 1: [0, 0]
 AssertionError: Sort must not lose elements: [0, 0] -> [0]
 ```
 
@@ -93,16 +94,15 @@ Hegel generated 100 lists (the default). When it found a failing case like `[3, 
 The simplest property to test: a generated integer stays within its declared bounds.
 
 ```java
-import dev.hegel.Hegel;
+import dev.hegel.HegelTest;
+import dev.hegel.TestCase;
 import static dev.hegel.generators.Generators.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@Test
-void integersAreInRange() {
-    Hegel.test("integers are in range", tc -> {
-        long n = tc.draw(integers(0, 100));
-        assertTrue(n >= 0 && n <= 100, "Expected n in [0,100], got " + n);
-    });
+@HegelTest
+void integersAreInRange(TestCase tc) {
+    long n = tc.draw(integers(0, 100));
+    assertTrue(n >= 0 && n <= 100, "Expected n in [0,100], got " + n);
 }
 ```
 
@@ -113,20 +113,21 @@ Run `mvn test`. Hegel generates 100 values and the test passes.
 Now write a property that looks right but is subtly wrong. Integer addition can overflow:
 
 ```java
-@Test
-void additionLooksPositive() {
-    Hegel.test("sum of two positives is larger", tc -> {
-        long x = tc.draw(integers(1, Long.MAX_VALUE));
-        long y = tc.draw(integers(1, Long.MAX_VALUE));
-        // x + y overflows when y = Long.MAX_VALUE
-        assertTrue(x + y > x, x + " + " + y + " should grow");
-    });
+@HegelTest
+void additionLooksPositive(TestCase tc) {
+    long x = tc.draw(integers(1, Long.MAX_VALUE));
+    long y = tc.draw(integers(1, Long.MAX_VALUE));
+    // x + y overflows when y = Long.MAX_VALUE
+    assertTrue(x + y > x, x + " + " + y + " should grow");
 }
 ```
 
-Hegel finds the bug and shrinks it to its simplest form:
+Hegel finds the bug and shrinks it to its simplest form. The drawn values are shown automatically:
 
 ```
+Drawn values:
+  Draw 1: 1
+  Draw 2: 9223372036854775807
 AssertionError: 1 + 9223372036854775807 should grow
 ```
 
@@ -151,15 +152,13 @@ Generator<Long> doubled = integers(0, 50).map(n -> n * 2);
 Because drawing values is imperative, you can use an earlier result to configure a later generator. This is one of Hegel's most powerful features:
 
 ```java
-@Test
-void listIndexIsAlwaysValid() {
-    Hegel.test("list index is always valid", tc -> {
-        int n = (int) tc.draw(integers(1, 10));
-        List<Long> lst = tc.draw(lists(integers()).minSize(n).maxSize(n));
-        int index = (int) tc.draw(integers(0, n - 1));
-        // lst always has exactly n elements, so index is always in bounds
-        assertNotNull(lst.get(index));
-    });
+@HegelTest
+void listIndexIsAlwaysValid(TestCase tc) {
+    int n = (int) tc.draw(integers(1, 10));
+    List<Long> lst = tc.draw(lists(integers()).minSize(n).maxSize(n));
+    int index = (int) tc.draw(integers(0, n - 1));
+    // lst always has exactly n elements, so index is always in bounds
+    assertNotNull(lst.get(index));
 }
 ```
 
@@ -172,27 +171,42 @@ Draw multiple values and combine them into a domain object:
 ```java
 record Point(long x, long y) {}
 
-@Test
-void pointsAreInQuadrant() {
-    Hegel.test("points are in first quadrant", tc -> {
-        long x = tc.draw(integers(0, 1000));
-        long y = tc.draw(integers(0, 1000));
-        Point p = new Point(x, y);
-        assertTrue(p.x() >= 0 && p.y() >= 0);
-    });
+@HegelTest
+void pointsAreInQuadrant(TestCase tc) {
+    long x = tc.draw(integers(0, 1000));
+    long y = tc.draw(integers(0, 1000));
+    Point p = new Point(x, y);
+    assertTrue(p.x() >= 0 && p.y() >= 0);
 }
 ```
 
 When a test fails, Hegel shrinks all the draws together, so the reported failing `Point` is always the simplest one.
 
+### Labeled draws
+
+By default, drawn values are shown as `Draw 1`, `Draw 2`, etc. You can give them descriptive labels:
+
+```java
+long x = tc.draw(integers(), "x");
+List<Long> xs = tc.draw(lists(integers()), "xs");
+```
+
+On failure, labeled draws are shown by name:
+
+```
+Drawn values:
+  x: 42
+  xs: [0, 0]
+```
+
 ### Debugging with `note()`
 
-Use `tc.note()` to print values during the final shrunk replay:
+Use `tc.note()` to print additional messages during the final shrunk replay:
 
 ```java
 Hegel.test("note example", tc -> {
     long x = tc.draw(integers());
-    tc.note("drew x = " + x);
+    tc.note("computed sum = " + (x + 1));
     // ... rest of test
 });
 ```
@@ -201,23 +215,47 @@ Notes are suppressed during normal runs and only printed when replaying the shru
 
 ### Changing the number of test cases
 
+Use the `testCases` attribute on `@HegelTest`:
+
 ```java
-Settings s = Settings.builder().testCases(500).build();
-Hegel.test("more thorough test", s, tc -> {
+@HegelTest(testCases = 500)
+void moreThoroughTest(TestCase tc) {
     // ...
-});
+}
 ```
 
 The default is 100. Increase for properties that need wider coverage; decrease if they are slow.
+
+### Callback form
+
+If you prefer, you can use `Hegel.test()` directly instead of `@HegelTest`:
+
+```java
+@Test
+void myProperty() {
+    Hegel.test("my property", tc -> {
+        long x = tc.draw(integers());
+        // ...
+    });
+}
+```
+
+Or with custom settings:
+
+```java
+Settings s = Settings.builder().testCases(500).seed(42L).build();
+Hegel.test("my property", s, tc -> { ... });
+```
 
 ## API Reference
 
 ### Drawing values
 
-Inside `Hegel.test()`, you receive a `TestCase` (`tc`) that you use to draw generated values:
+Inside a `@HegelTest` method (or `Hegel.test()` callback), you receive a `TestCase` (`tc`) to draw generated values:
 
 ```java
-Hegel.test("my property", tc -> {
+@HegelTest
+void myProperty(TestCase tc) {
     long    n1 = tc.draw(integers());                        // any long
     long    n2 = tc.draw(integers(0, 100));                  // in [0, 100]
     int     n3 = tc.draw(integers(0, 100).asInt());          // as int
@@ -227,7 +265,10 @@ Hegel.test("my property", tc -> {
     String  s1 = tc.draw(text());
     String  s2 = tc.draw(text().minSize(3).maxSize(20).ascii());
     byte[]  b2 = tc.draw(binary().minSize(1).maxSize(256));
-});
+
+    // Labeled draws appear by name in failure output:
+    long x = tc.draw(integers(), "x");                       // "x: 42"
+}
 ```
 
 ### Collection generators
@@ -282,6 +323,15 @@ tc.target((double) x, "x"); // guide Hegel toward larger values of x
 ```
 
 ### Settings
+
+Common settings are available directly on `@HegelTest`:
+
+```java
+@HegelTest(testCases = 500, seed = 42)
+void myProperty(TestCase tc) { ... }
+```
+
+For advanced settings, use the `Settings` builder with the callback form:
 
 ```java
 Settings s = Settings.builder()
