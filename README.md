@@ -84,7 +84,7 @@ Hegel finds the bug and shrinks the failing case to its minimal form:
 AssertionError: Sort must not lose elements: [0, 0] -> [0]
 ```
 
-Hegel generated hundreds of lists. When it found `[3, 3, 1, 2]` failing, it automatically shrunk that list until it found `[0, 0]` — the simplest possible list that exposes the duplicate-removal bug.
+Hegel generated 100 lists (the default). When it found a failing case like `[3, 3, 1, 2]`, it automatically shrunk that list until it found `[0, 0]` — the simplest possible list that exposes the duplicate-removal bug.
 
 ## Tutorial
 
