@@ -27,15 +27,14 @@ jobs:
         uses: Bogdanp/setup-racket@v1.11
         with:
           version: stable
-          packages: cbor
+
+      - name: Install Racket package dependencies
+        run: raco pkg install --auto --no-docs cbor
 
       - name: Install just
         run: sudo apt-get update && sudo apt-get install -y just
 
       - uses: astral-sh/setup-uv@v6
-
-      - name: Install package dependencies
-        run: raco pkg install --auto --no-docs cbor || true
 
       - name: Run check (coverage + lint + conformance)
         run: just check
@@ -54,7 +53,9 @@ jobs:
         uses: Bogdanp/setup-racket@v1.11
         with:
           version: stable
-          packages: cbor
+
+      - name: Install Racket package dependencies
+        run: raco pkg install --auto --no-docs cbor
 
       - name: Install just
         run: sudo apt-get update && sudo apt-get install -y just
