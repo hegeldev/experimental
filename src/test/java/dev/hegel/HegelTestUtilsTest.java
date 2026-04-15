@@ -59,6 +59,13 @@ class HegelTestUtilsTest {
     assertThrows(AssertionError.class, () -> findAny(integers(0L, 0L), x -> x > 0L));
   }
 
+  @Test
+  void findAnyWorksForNullValues() {
+    // optional() can return null; findAny must handle null values correctly
+    Long found = findAny(optional(integers(1L, 10L)), x -> x == null);
+    assertNull(found, "findAny should return null when null satisfies the predicate");
+  }
+
   // -----------------------------------------------------------------------
   // minimal
   // -----------------------------------------------------------------------

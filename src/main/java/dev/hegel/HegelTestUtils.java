@@ -1,5 +1,6 @@
 package dev.hegel;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
@@ -74,6 +75,7 @@ public final class HegelTestUtils {
    */
   public static <T> T findAny(Generator<T> gen, Predicate<T> cond) {
     AtomicReference<T> result = new AtomicReference<>();
+    AtomicBoolean found = new AtomicBoolean(false);
     try {
       Hegel.test(
           "findAny",
@@ -81,15 +83,15 @@ public final class HegelTestUtils {
             T val = tc.draw(gen);
             if (cond.test(val)) {
               result.set(val);
+              found.set(true);
               throw new AssertionError("found: " + val);
             }
           });
     } catch (AssertionError ignored) {
       // Expected: a matching value was found (test "fails" = findAny succeeds)
     }
-    T found = result.get();
-    if (found != null) {
-      return found;
+    if (found.get()) {
+      return result.get();
     }
     throw new AssertionError("findAny: no value satisfying condition was found");
   }
@@ -104,6 +106,7 @@ public final class HegelTestUtils {
    */
   public static <T> T minimal(Generator<T> gen, Predicate<T> cond) {
     AtomicReference<T> result = new AtomicReference<>();
+    AtomicBoolean found = new AtomicBoolean(false);
     try {
       Hegel.test(
           "minimal",
@@ -111,15 +114,15 @@ public final class HegelTestUtils {
             T val = tc.draw(gen);
             if (cond.test(val)) {
               result.set(val);
+              found.set(true);
               throw new AssertionError("found: " + val);
             }
           });
     } catch (AssertionError ignored) {
       // Expected: a matching value was found, shrunk to minimal
     }
-    T found = result.get();
-    if (found != null) {
-      return found;
+    if (found.get()) {
+      return result.get();
     }
     throw new AssertionError("minimal: no value satisfying condition was found");
   }
