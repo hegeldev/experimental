@@ -193,8 +193,10 @@
     (bytes->string/utf-8 bstr)))
 
 (define hegel-cbor-config
+  ;; Start from cbor-default-config (handles bignums via tags 2/3, rationals via
+  ;; tag 30) and layer on our WTF-8 string handler for Hegel's tag 91.
   (with-cbor-tag-deserializer
-   cbor-empty-config
+   cbor-default-config
    HEGEL-STRING-TAG
    (lambda (_tag-number content)
      (cond

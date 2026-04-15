@@ -187,7 +187,21 @@
       ;; Tag 91 with integer content: format "~a" → string of integer
       ;; 0xD8 0x5B = tag 91, 0x18 0x2A = integer 42
       (define result (cbor-decode-value #"\xD8\x5B\x18\x2A"))
-      (check-pred string? result)))
+      (check-pred string? result))
+
+    (test-case "CBOR tag 2 unsigned bignum decodes to exact integer"
+      ;; Tag 2 (unsigned bignum): 0xC2 = tag 2, 0x49 = bytes of length 9
+      ;; bytes: 0x01 followed by 8 zeros = 2^64
+      (define result (cbor-decode-value #"\xC2\x49\x01\x00\x00\x00\x00\x00\x00\x00\x00"))
+      (check-pred exact-integer? result)
+      (check-equal? result (expt 2 64)))
+
+    (test-case "CBOR tag 3 negative bignum decodes to exact integer"
+      ;; Tag 3 (negative bignum): -1 - n where n = 2^64 → result = -(2^64 + 1)
+      ;; 0xC3 = tag 3, 0x49 = bytes of length 9, same bytes as above
+      (define result (cbor-decode-value #"\xC3\x49\x01\x00\x00\x00\x00\x00\x00\x00\x00"))
+      (check-pred exact-integer? result)
+      (check-true (negative? result))))
 
 ))
 
