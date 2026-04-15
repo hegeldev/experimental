@@ -5,19 +5,9 @@
 > but it may in fact be extremely bad in ways we would not know about, because we have not
 > meaningfully reviewed it. Please treat it with appropriate scepticism and caution.
 
-> [!NOTE]
-> This is a Claude-authored implementation, created as a test of the
-> [Hegel implementation guide](https://github.com/hegeldev/hegel-book).
-> It is functional but has not been reviewed for production use.
-
-> [!IMPORTANT]
-> Hegel is in beta. As part of our beta, we may make breaking changes.
-> See https://hegel.dev/compatibility for more details.
-
 # Hegel for Perl
 
 * [Website](https://hegel.dev)
-* [Hegel implementation guide](https://github.com/hegeldev/hegel-book)
 
 `hegel-perl` is a property-based testing library for Perl. It is based on [Hypothesis](https://github.com/hypothesisworks/hypothesis), using the [Hegel](https://hegel.dev/) protocol.
 

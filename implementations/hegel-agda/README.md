@@ -6,13 +6,11 @@
 > meaningfully reviewed it. Please treat it with appropriate scepticism and caution.
 
 > [!NOTE]
-> This is a Claude-written implementation of a Hegel library for Agda.
-> It was created as an experiment in bringing property-based testing to
-> a dependently-typed proof assistant. The implementation is functional
-> but early-stage.
-
-> [!IMPORTANT]
-> Hegel is in beta and may make breaking changes. See https://hegel.dev/compatibility for details.
+> This library is somewhere between a joke and a stress test of our agent harness, and I would be
+> very surprised to learn that anyone wanted to write property-based tests in Agda using Hegel.
+> If you do... you probably don't want to use this one. I suspect it barely works at all, and
+> it is really only recorded here for posterity.
+> -[@DRMacIver](http://github.com/DRMacIver/)
 
 # Hegel for Agda
 

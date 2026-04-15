@@ -5,10 +5,6 @@
 > but it may in fact be extremely bad in ways we would not know about, because we have not
 > meaningfully reviewed it. Please treat it with appropriate scepticism and caution.
 
-> **Beta notice:** hegel-racket is in early development. Bugs and API changes are expected. Please report issues at https://github.com/hegeldev/hegel-racket/issues.
-
-> **Note:** This implementation was generated with the assistance of Claude (claude-sonnet-4-6) and has not been extensively used in production. Please report issues.
-
 # Hegel for Racket
 
 **hegel-racket** is a property-based testing library for Racket, based on [Hypothesis](https://hypothesis.readthedocs.io/), using the [Hegel protocol](https://hegel.dev).
@@ -16,21 +12,11 @@
 ## Prerequisites
 
 - Racket 8.0+
-- Python and [uv](https://docs.astral.sh/uv/) (for running hegel-core):
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
 
 ## Installation
 
-Install from the Racket package catalog:
-
-```bash
-raco pkg install hegel
-```
-
-Or install from source:
+Install from source:
 
 ```bash
 git clone https://github.com/hegeldev/hegel-racket.git

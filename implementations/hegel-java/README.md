@@ -5,9 +5,9 @@
 > but it may in fact be extremely bad in ways we would not know about, because we have not
 > meaningfully reviewed it. Please treat it with appropriate scepticism and caution.
 
-> **Beta notice:** hegel-java is in early development. Bugs and API changes are expected. Please report issues at https://github.com/hegeldev/hegel-java/issues.
-
-> **Note:** This implementation was generated with the assistance of Claude (claude-sonnet-4-6) and has not been extensively used in production. Please report issues.
+> [!NOTE]
+> We are overwhelmingly likely to want to write an actual Hegel-for-Java at some point. It may
+> or may not be based on this implementation when we do.
 
 # Hegel for Java
 
@@ -17,15 +17,10 @@
 
 - Java 21+
 - Maven 3.8+
-- Python and [uv](https://docs.astral.sh/uv/) (for running hegel-core):
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
 
 ## Installation
 
-hegel-java is not yet published to Maven Central. Install it locally first:
+hegel-java is not published to Maven Central (because it is a research prototype). Install it locally first:
 
 ```bash
 git clone https://github.com/hegeldev/hegel-java.git
