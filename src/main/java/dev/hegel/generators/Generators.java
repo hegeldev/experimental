@@ -482,6 +482,7 @@ public final class Generators {
     return sampledFrom(Arrays.asList(values));
   }
 
+  /** Sample uniformly from a list of values. */
   public static <T> Generator<T> sampledFrom(List<T> values) {
     if (values.isEmpty())
       throw new IllegalArgumentException("sampledFrom: values must not be empty");
@@ -808,6 +809,7 @@ public final class Generators {
     return oneOf(Arrays.asList(gens));
   }
 
+  /** Choose one of the given generators from a list, each with equal probability. */
   public static <T> Generator<T> oneOf(List<Generator<T>> gens) {
     if (gens.isEmpty()) throw new IllegalArgumentException("oneOf: no generators provided");
     if (gens.size() == 1) return gens.get(0);
