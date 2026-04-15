@@ -39,9 +39,14 @@ format:
 
 # Lint: check that all files compile cleanly
 lint:
-    raco make main.rkt conformance.rkt tests/test-protocol.rkt \
-        tests/test-connection.rkt tests/test-runner.rkt tests/test-generators.rkt \
-        tests/test-session.rkt tests/test-conformance-helpers.rkt
+    raco make main.rkt conformance.rkt \
+        tests/test-protocol.rkt tests/test-connection.rkt tests/test-runner.rkt \
+        tests/test-generators.rkt tests/test-session.rkt tests/test-conformance-helpers.rkt \
+        conformance/test_booleans.rkt conformance/test_integers.rkt \
+        conformance/test_floats.rkt conformance/test_text.rkt \
+        conformance/test_binary.rkt conformance/test_sampled_from.rkt \
+        conformance/test_lists.rkt conformance/test_hashmaps.rkt \
+        conformance/test_error_handling.rkt
 
 # Run all checks: coverage (includes tests) + lint + conformance
 check: coverage lint conformance
