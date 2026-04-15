@@ -86,6 +86,9 @@ Implement a Hegel property-based testing library in Java.
 - [x] characters() generator (single Unicode character)
 - [x] sets() generator (unique elements, basic and non-basic paths)
 - [x] durations() generator (java.time.Duration via nanosecond integers)
-- [x] All tests passing (231 tests)
+- [x] Shrink quality test (minimal counterexample for duplicate lists = [0,0])
+- [x] Tutorial section in README (passing test, failing test, dependent generation, composite objects)
+- [x] HegelTestUtils section in README
+- [x] All tests passing (232 tests)
 - [x] `just coverage` passes with 100% coverage
 - [x] `just check` passes
