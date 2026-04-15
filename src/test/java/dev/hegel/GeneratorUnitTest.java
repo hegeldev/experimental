@@ -813,71 +813,83 @@ class GeneratorUnitTest {
   }
 
   // -----------------------------------------------------------------------
-  // Counterexample display (draw tracking + printDrawnValues)
+  // Counterexample display (draw prints to stderr on final run)
   // -----------------------------------------------------------------------
 
   @Test
-  void drawTracksValuesOnFinalRun() {
+  void drawPrintsToStderrOnFinalRun() {
     MockDataSource ds =
         new MockDataSource().withResponse(new LongNode(42)).withResponse(new LongNode(7));
-    TestCase tc = tcFinal(ds);
-    tc.draw(integers());
-    tc.draw(integers());
-    assertEquals(2, tc.drawnValues().size());
-    assertTrue(tc.drawnValues().get(0).contains("42"));
-    assertTrue(tc.drawnValues().get(1).contains("7"));
+    java.io.PrintStream origErr = System.err;
+    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+    System.setErr(new java.io.PrintStream(baos));
+    try {
+      TestCase tc = tcFinal(ds);
+      tc.draw(integers());
+      tc.draw(integers());
+      String output = baos.toString();
+      assertTrue(output.contains("var draw_1 = 42;"), "got: " + output);
+      assertTrue(output.contains("var draw_2 = 7;"), "got: " + output);
+    } finally {
+      System.setErr(origErr);
+    }
   }
 
   @Test
-  void drawDoesNotTrackOnNonFinalRun() {
+  void drawDoesNotPrintOnNonFinalRun() {
     MockDataSource ds = new MockDataSource().withResponse(new LongNode(42));
-    TestCase tc = tc(ds);
-    tc.draw(integers());
-    assertTrue(tc.drawnValues().isEmpty());
+    java.io.PrintStream origErr = System.err;
+    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+    System.setErr(new java.io.PrintStream(baos));
+    try {
+      TestCase tc = tc(ds);
+      tc.draw(integers());
+      assertEquals("", baos.toString());
+    } finally {
+      System.setErr(origErr);
+    }
   }
 
   @Test
-  void drawWithLabelTracksOnFinalRun() {
+  void drawWithLabelPrintsLabeledFormat() {
     MockDataSource ds = new MockDataSource().withResponse(new LongNode(99));
-    TestCase tc = tcFinal(ds);
-    tc.draw(integers(), "x");
-    assertEquals(1, tc.drawnValues().size());
-    assertEquals("x: 99", tc.drawnValues().get(0));
+    java.io.PrintStream origErr = System.err;
+    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+    System.setErr(new java.io.PrintStream(baos));
+    try {
+      TestCase tc = tcFinal(ds);
+      tc.draw(integers(), "x");
+      String output = baos.toString();
+      assertTrue(output.contains("var x = 99;"), "got: " + output);
+    } finally {
+      System.setErr(origErr);
+    }
   }
 
   @Test
-  void drawWithLabelDoesNotTrackOnNonFinalRun() {
+  void drawWithLabelDoesNotPrintOnNonFinalRun() {
     MockDataSource ds = new MockDataSource().withResponse(new LongNode(99));
-    TestCase tc = tc(ds);
-    tc.draw(integers(), "x");
-    assertTrue(tc.drawnValues().isEmpty());
+    java.io.PrintStream origErr = System.err;
+    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+    System.setErr(new java.io.PrintStream(baos));
+    try {
+      TestCase tc = tc(ds);
+      tc.draw(integers(), "x");
+      assertEquals("", baos.toString());
+    } finally {
+      System.setErr(origErr);
+    }
   }
 
   @Test
-  void printDrawnValuesOutputsFormattedLines() {
+  void drawCountIncrementsOnEveryDraw() {
     MockDataSource ds =
-        new MockDataSource().withResponse(new LongNode(10)).withResponse(new TextNode("hello"));
-    TestCase tc = tcFinal(ds);
-    tc.draw(integers(), "n");
-    tc.draw(text());
-
-    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-    java.io.PrintStream ps = new java.io.PrintStream(baos);
-    tc.printDrawnValues(ps);
-    String output = baos.toString();
-    assertTrue(output.contains("Drawn values:"));
-    assertTrue(output.contains("  n: 10"));
-    assertTrue(output.contains("  Draw 2: hello"));
-  }
-
-  @Test
-  void printDrawnValuesEmptyWhenNoDraws() {
-    MockDataSource ds = new MockDataSource();
-    TestCase tc = tcFinal(ds);
-
-    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-    java.io.PrintStream ps = new java.io.PrintStream(baos);
-    tc.printDrawnValues(ps);
-    assertEquals("", baos.toString());
+        new MockDataSource().withResponse(new LongNode(1)).withResponse(new LongNode(2));
+    TestCase tc = tc(ds);
+    assertEquals(0, tc.drawCount());
+    tc.draw(integers());
+    assertEquals(1, tc.drawCount());
+    tc.draw(integers());
+    assertEquals(2, tc.drawCount());
   }
 }

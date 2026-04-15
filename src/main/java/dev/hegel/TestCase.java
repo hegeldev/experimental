@@ -1,9 +1,6 @@
 package dev.hegel;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A handle to the current test case.
@@ -28,7 +25,7 @@ public class TestCase {
 
   private final DataSource dataSource;
   private final boolean isFinalRun;
-  private final List<String> draws = new ArrayList<>();
+  private int drawCount = 0;
 
   TestCase(DataSource dataSource, boolean isFinalRun) {
     this.dataSource = dataSource;
@@ -42,14 +39,18 @@ public class TestCase {
   /**
    * Draw a value from a generator.
    *
+   * <p>During the final shrunk replay of a failing test, each draw is printed to stderr in
+   * let-binding format: {@code var draw_1 = <value>;}
+   *
    * @param generator the generator to draw from
    * @param <T> the type of value to draw
    * @return the generated value
    */
   public <T> T draw(Generator<T> generator) {
     T value = generator.generate(this);
+    drawCount++;
     if (isFinalRun) {
-      draws.add("Draw " + (draws.size() + 1) + ": " + value);
+      System.err.println("var draw_" + drawCount + " = " + value + ";");
     }
     return value;
   }
@@ -57,18 +58,19 @@ public class TestCase {
   /**
    * Draw a value from a generator with a descriptive label.
    *
-   * <p>The label appears in the counterexample display when a test fails. For example, {@code
-   * tc.draw(integers(), "x")} will print {@code x: 42} in the failure output.
+   * <p>During the final shrunk replay, the draw is printed as {@code var label = <value>;} instead
+   * of the default {@code var draw_N = <value>;}.
    *
    * @param generator the generator to draw from
-   * @param label a descriptive name for this drawn value
+   * @param label a variable name for this drawn value
    * @param <T> the type of value to draw
    * @return the generated value
    */
   public <T> T draw(Generator<T> generator, String label) {
     T value = generator.generate(this);
+    drawCount++;
     if (isFinalRun) {
-      draws.add(label + ": " + value);
+      System.err.println("var " + label + " = " + value + ";");
     }
     return value;
   }
@@ -159,18 +161,8 @@ public class TestCase {
     return isFinalRun;
   }
 
-  /** Print drawn values to the given stream (used for counterexample display on failure). */
-  void printDrawnValues(PrintStream out) {
-    if (!draws.isEmpty()) {
-      out.println("Drawn values:");
-      for (String entry : draws) {
-        out.println("  " + entry);
-      }
-    }
-  }
-
-  /** Return the list of drawn value descriptions (for testing). */
-  List<String> drawnValues() {
-    return draws;
+  /** Return the number of top-level draws so far. */
+  int drawCount() {
+    return drawCount;
   }
 }

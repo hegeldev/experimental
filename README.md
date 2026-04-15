@@ -80,8 +80,8 @@ mvn test
 Hegel finds the bug and shrinks the failing case to its minimal form. The failure output shows every drawn value:
 
 ```
-Drawn values:
-  Draw 1: [0, 0]
+var draw_1 = [0, 0];
+
 AssertionError: Sort must not lose elements: [0, 0] -> [0]
 ```
 
@@ -125,9 +125,9 @@ void additionLooksPositive(TestCase tc) {
 Hegel finds the bug and shrinks it to its simplest form. The drawn values are shown automatically:
 
 ```
-Drawn values:
-  Draw 1: 1
-  Draw 2: 9223372036854775807
+var draw_1 = 1;
+var draw_2 = 9223372036854775807;
+
 AssertionError: 1 + 9223372036854775807 should grow
 ```
 
@@ -184,19 +184,18 @@ When a test fails, Hegel shrinks all the draws together, so the reported failing
 
 ### Labeled draws
 
-By default, drawn values are shown as `Draw 1`, `Draw 2`, etc. You can give them descriptive labels:
+By default, drawn values are shown as `draw_1`, `draw_2`, etc. You can give them descriptive names:
 
 ```java
 long x = tc.draw(integers(), "x");
 List<Long> xs = tc.draw(lists(integers()), "xs");
 ```
 
-On failure, labeled draws are shown by name:
+On failure, labeled draws use the given name:
 
 ```
-Drawn values:
-  x: 42
-  xs: [0, 0]
+var x = 42;
+var xs = [0, 0];
 ```
 
 ### Debugging with `note()`
@@ -266,8 +265,8 @@ void myProperty(TestCase tc) {
     String  s2 = tc.draw(text().minSize(3).maxSize(20).ascii());
     byte[]  b2 = tc.draw(binary().minSize(1).maxSize(256));
 
-    // Labeled draws appear by name in failure output:
-    long x = tc.draw(integers(), "x");                       // "x: 42"
+    // Labeled draws use the given name in failure output:
+    long x = tc.draw(integers(), "x");                       // "var x = 42;"
 }
 ```
 

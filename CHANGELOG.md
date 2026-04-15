@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.1 - 2026-04-15
+
+### Added
+
+- `@HegelTest` JUnit 5 annotation — declare property tests with `@HegelTest void myProp(TestCase tc)` instead of wrapping in `@Test` + `Hegel.test()`
+- `HegelExtension` JUnit 5 extension (powers `@HegelTest`)
+- Counterexample display — drawn values are printed to stderr during the final shrunk replay in let-binding format (`var draw_1 = <value>;`)
+- `tc.draw(generator, "label")` — labeled draws use the given name instead of `draw_N`
+- `junit-jupiter-api` is now a compile dependency (consumers already have JUnit in test scope)
+
 ## 0.1.0 - 2026-04-14
 
 Initial release of hegel-java.
