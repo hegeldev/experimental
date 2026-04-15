@@ -18,6 +18,15 @@
                 #:include-characters (or/c string? #f)
                 #:exclude-characters (or/c string? #f))
                generator?)]
+  [characters (->* ()
+                   (#:codec    (or/c string? #f)
+                    #:min-codepoint (or/c exact-nonnegative-integer? #f)
+                    #:max-codepoint (or/c exact-nonnegative-integer? #f)
+                    #:categories (or/c (listof string?) #f)
+                    #:exclude-categories (or/c (listof string?) #f)
+                    #:include-characters (or/c string? #f)
+                    #:exclude-characters (or/c string? #f))
+                   generator?)]
   [binary (->* ()
                (#:min-size exact-nonnegative-integer?
                 #:max-size (or/c exact-nonnegative-integer? #f))
@@ -52,6 +61,29 @@
   ;; The server sends strings wrapped in CBOR tag 91 (WTF-8)
   ;; Our CBOR decoder in protocol.rkt handles tag 91 → string
   (make-basic-generator schema))
+
+;; ---------------------------------------------------------------------------
+;; Characters
+;; ---------------------------------------------------------------------------
+
+;;; Generate single Unicode characters (as 1-character strings).
+;;; Accepts the same character-filtering options as `text`.
+(define (characters #:codec [codec #f]
+                    #:min-codepoint [min-codepoint #f]
+                    #:max-codepoint [max-codepoint #f]
+                    #:categories [categories #f]
+                    #:exclude-categories [exclude-categories #f]
+                    #:include-characters [include-characters #f]
+                    #:exclude-characters [exclude-characters #f])
+  (text #:min-size 1
+        #:max-size 1
+        #:codec codec
+        #:min-codepoint min-codepoint
+        #:max-codepoint max-codepoint
+        #:categories categories
+        #:exclude-categories exclude-categories
+        #:include-characters include-characters
+        #:exclude-characters exclude-characters))
 
 ;; ---------------------------------------------------------------------------
 ;; Binary

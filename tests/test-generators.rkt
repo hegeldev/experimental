@@ -4,6 +4,7 @@
 
 (require (except-in rackunit make-test-case)
          rackunit/text-ui
+         racket/set
          (except-in (file "../main.rkt") make-test-case)
          (only-in (file "../test-case.rkt") make-test-case test-case-draw-count test-case-span-depth)
          (only-in (file "../generators/core.rkt") generator-as-basic basic-schema-schema basic-schema-transform))
@@ -403,8 +404,21 @@
       (define gen (lists non-basic))
       (check-false (generator-as-basic gen)))
 
-    (test-case "unique forces non-basic"
+    (test-case "basic elem + unique → still basic (server handles deduplication)"
+      ;; When elem gen is basic, unique: true is sent in the schema.
+      ;; The server handles deduplication, so we stay on the basic path.
       (define gen (lists (integers) #:unique #t))
+      (check-not-false (generator-as-basic gen)))
+
+    (test-case "basic unique list schema includes unique: true"
+      (define gen (lists (integers) #:unique #t))
+      (define bs (generator-as-basic gen))
+      (define schema (basic-schema-schema bs))
+      (check-equal? (hash-ref schema "unique") #t))
+
+    (test-case "non-basic elem + unique → non-basic"
+      (define non-basic (generator-filter (integers) odd?))
+      (define gen (lists non-basic #:unique #t))
       (check-false (generator-as-basic gen)))
 
     (test-case "basic list schema has correct fields"
@@ -430,12 +444,21 @@
       (define result (draw tc gen))
       (check-equal? result '(10 20)))
 
-    (test-case "unique list rejects duplicates"
-      ;; unique list: when a duplicate value is seen, collection-reject is called
-      ;; and the loop continues without adding to acc
+    (test-case "unique list with basic elem applies server schema (basic path)"
+      ;; With a basic elem gen, unique list uses the basic path.
+      ;; The mock returns a list directly (server-side deduplication).
       (define gen (lists (integers) #:unique #t))
+      ;; Mock generate returns a list directly
+      (define result (draw-with gen #:value '(5 7 9)))
+      (check-equal? result '(5 7 9)))
+
+    (test-case "unique list rejects duplicates (non-basic path)"
+      ;; When elem is non-basic, unique list uses the collection protocol.
+      ;; Duplicate values trigger collection-reject.
+      (define filtered (generator-filter (integers) (lambda (x) #t)))
+      (define gen (lists filtered #:unique #t))
       ;; mock: more = #t #t #t #f, values = 5 5 7 (first two are duplicates)
-      ;; the duplicate 5 gets rejected and the loop retries; 7 is unique
+      ;; the duplicate 5 gets rejected; 7 is unique → result is '(5 7)
       (define-values (ds _ _2)
         (make-mock-ds #:values '(5 5 7 0) #:more '(#t #t #t #f)))
       (define tc (make-test-case ds #f))
@@ -477,6 +500,34 @@
       ;; Server returns list [0, 5] → element 0: coerce-float(0)=0.0, element 1: 5
       (define result (draw-with gen #:value '(0 5)))
       (check-equal? result '(0.0 5))))
+
+   ;; ----- sets -----
+   (test-suite
+    "sets"
+
+    (test-case "sets with basic elem is basic (generator-map preserves basicness)"
+      ;; sets wraps lists(unique=#t) with generator-map.
+      ;; Since both lists(basic, unique) and generator-map-of-basic are basic,
+      ;; sets returns a basic generator.
+      (define gen (sets (integers)))
+      (check-not-false (generator-as-basic gen)))
+
+    (test-case "sets schema has unique: true"
+      (define gen (sets (integers)))
+      (define bs (generator-as-basic gen))
+      (define schema (basic-schema-schema bs))
+      (check-equal? (hash-ref schema "type") "list")
+      (check-equal? (hash-ref schema "unique") #t))
+
+    (test-case "sets with mock values returns a Racket set"
+      ;; Basic path: generate returns the whole list at once; transform applies list->set
+      (define gen (sets (integers)))
+      ;; Mock: generate returns a list directly (server sends deduplicated list)
+      (define result (draw-with gen #:value '(1 2 3)))
+      (check-pred set? result)
+      (check-true (set-member? result 1))
+      (check-true (set-member? result 2))
+      (check-true (set-member? result 3))))
 
    ;; ----- hashmaps -----
    (test-suite
@@ -563,7 +614,27 @@
       (define gen (from-regex "[0-9]+"))
       (define bs (generator-as-basic gen))
       (check-equal? (hash-ref (basic-schema-schema bs) "type") "regex")
-      (check-equal? (hash-ref (basic-schema-schema bs) "pattern") "[0-9]+")))
+      (check-equal? (hash-ref (basic-schema-schema bs) "pattern") "[0-9]+")
+      ;; Must use "fullmatch" not "full_match" (hegel-core key name)
+      (check-equal? (hash-ref (basic-schema-schema bs) "fullmatch") #t))
+
+    (test-case "ip-addresses is basic (one_of ipv4+ipv6)"
+      (check-not-false (generator-as-basic (ip-addresses))))
+
+    (test-case "ip-addresses schema is one_of"
+      (define bs (generator-as-basic (ip-addresses)))
+      (define schema (basic-schema-schema bs))
+      (check-equal? (hash-ref schema "type") "one_of"))
+
+    (test-case "characters is basic"
+      (check-not-false (generator-as-basic (characters))))
+
+    (test-case "characters schema has size 1"
+      (define bs (generator-as-basic (characters)))
+      (define schema (basic-schema-schema bs))
+      (check-equal? (hash-ref schema "type") "string")
+      (check-equal? (hash-ref schema "min_size") 1)
+      (check-equal? (hash-ref schema "max_size") 1)))
 
    ;; ----- draw vs draw-silent -----
    (test-suite

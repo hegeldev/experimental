@@ -7,6 +7,8 @@
 
 (require (except-in rackunit make-test-case run-test-case)
          rackunit/text-ui
+         racket/list
+         racket/set
          racket/path
          racket/runtime-path
          racket/string
@@ -142,6 +144,82 @@
             (unless (or (and (integer? v) (<= 0 v 10)) (boolean? v))
               (error (format "one-of returned unexpected value: ~a" v))))
           #:test-cases 10))))
+
+    (test-case "characters generator works"
+      ;; Verifies the bug fix: characters uses string schema with size 1,
+      ;; not any non-existent schema type
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define c (draw tc (characters)))
+            (check-pred string? c)
+            (check-equal? (string-length c) 1))
+          #:test-cases 10))))
+
+    (test-case "characters with ascii constraint"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define c (draw tc (characters #:codec "ascii")))
+            (check-pred string? c)
+            (check-equal? (string-length c) 1))
+          #:test-cases 10))))
+
+    (test-case "ip-addresses generates valid IP strings"
+      ;; Verifies the bug fix: ip-addresses uses one-of(ipv4, ipv6),
+      ;; not the unsupported "ip_address" schema type
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define ip (draw tc (ip-addresses)))
+            (check-pred string? ip))
+          #:test-cases 10))))
+
+    (test-case "from-regex uses fullmatch"
+      ;; Verifies the bug fix: from-regex uses "fullmatch" key, not "full_match",
+      ;; so generated strings match the entire pattern
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define s (draw tc (from-regex "[0-9]+")))
+            (check-pred string? s)
+            ;; All chars must be digits (fullmatch guarantees this)
+            (check-true (regexp-match? #rx"^[0-9]+$" s)))
+          #:test-cases 20))))
+
+    (test-case "sets generator works"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define s (draw tc (sets (integers #:min-value 0 #:max-value 100))))
+            (check-pred set? s))
+          #:test-cases 10))))
+
+    (test-case "sets generator produces unique elements"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define lst (set->list (draw tc (sets (integers #:min-value 0 #:max-value 50)
+                                                  #:min-size 0 #:max-size 10))))
+            ;; A list from a set must have no duplicates
+            (check-equal? (length lst) (length (remove-duplicates lst))))
+          #:test-cases 20))))
+
+    (test-case "lists with unique produces no duplicates"
+      (check-not-exn
+       (lambda ()
+         (run-hegel
+          (lambda (tc)
+            (define lst (draw tc (lists (integers #:min-value 0 #:max-value 50)
+                                        #:unique #t #:max-size 10)))
+            (check-equal? (length lst) (length (remove-duplicates lst))))
+          #:test-cases 20))))
 
     (test-case "failing test is detected and raises"
       (check-exn

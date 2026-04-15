@@ -121,12 +121,14 @@
  floats
  booleans
  text
+ characters
  binary
  just
  sampled-from
  one-of
  optional
  lists
+ sets
  tuples
  dicts
  hashmaps

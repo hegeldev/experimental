@@ -1,9 +1,10 @@
 #lang racket/base
 
-;;; List, tuple, dict/hashmap generators.
+;;; List, set, tuple, dict/hashmap generators.
 
 (require racket/contract
          racket/list
+         racket/set
          "../test-case.rkt"
          "core.rkt")
 
@@ -15,6 +16,10 @@
                 #:unique   boolean?)
                generator?)]
   [tuples (-> generator? ... generator?)]
+  [sets   (->* (generator?)
+               (#:min-size exact-nonnegative-integer?
+                #:max-size (or/c exact-nonnegative-integer? #f))
+               generator?)]
   [dicts  (->* (generator? generator?)
                (#:min-size exact-nonnegative-integer?
                 #:max-size (or/c exact-nonnegative-integer? #f))
@@ -33,13 +38,13 @@
                #:max-size [max-size #f]
                #:unique   [unique #f])
   (define bs (generator-as-basic elem-gen))
-  (if (and bs (not unique))
-      ;; Basic path: compose schemas
-      (lists-basic elem-gen bs min-size max-size)
+  (if bs
+      ;; Basic path: compose schemas (server handles uniqueness when unique=#t)
+      (lists-basic elem-gen bs min-size max-size unique)
       ;; Non-basic path: collection protocol
       (lists-non-basic elem-gen min-size max-size unique)))
 
-(define (lists-basic elem-gen bs min-size max-size)
+(define (lists-basic elem-gen bs min-size max-size unique)
   (define elem-schema (basic-schema-schema bs))
   (define elem-transform (basic-schema-transform bs))
   (define list-schema
@@ -48,6 +53,7 @@
       (hash-set! h "elements" elem-schema)
       (hash-set! h "min_size" min-size)
       (when max-size (hash-set! h "max_size" max-size))
+      (when unique (hash-set! h "unique" #t))
       h))
   (define (transform raw)
     ;; raw is a list of values from the server (CBOR arrays decode as Racket lists)
@@ -80,6 +86,19 @@
      (tc-stop-span tc #f)
      result)
    (lambda () #f)))
+
+;; ---------------------------------------------------------------------------
+;; Sets
+;; ---------------------------------------------------------------------------
+
+;;; Generate Racket sets with unique elements from elem-gen.
+;;; Uses the basic path (server handles uniqueness) when elem-gen is basic.
+(define (sets elem-gen
+              #:min-size [min-size 0]
+              #:max-size [max-size #f])
+  (define list-gen (lists elem-gen #:min-size min-size #:max-size max-size #:unique #t))
+  ;; Wrap: convert the generated list to a Racket immutable set
+  (generator-map list-gen list->set))
 
 ;; ---------------------------------------------------------------------------
 ;; Tuples

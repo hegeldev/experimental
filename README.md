@@ -226,6 +226,8 @@ Inside `run-hegel`, you receive a test case `tc` that you use to draw generated 
    (define b1 (draw tc (booleans)))
    (define s1 (draw tc (text)))
    (define s2 (draw tc (text #:min-size 3 #:max-size 20)))
+   (define c1 (draw tc (characters)))                                  ; single Unicode character
+   (define c2 (draw tc (characters #:codec "ascii")))                  ; single ASCII character
    (define b2 (draw tc (binary #:min-size 1 #:max-size 256)))))
 ```
 
@@ -235,6 +237,8 @@ Inside `run-hegel`, you receive a test case `tc` that you use to draw generated 
 (define xs1 (draw tc (lists (integers))))
 (define xs2 (draw tc (lists (integers #:min-value 0 #:max-value 10)
                             #:min-size 1 #:max-size 5)))
+(define xu  (draw tc (lists (integers) #:unique #t)))              ; no duplicates
+(define s   (draw tc (sets  (integers #:min-value 0 #:max-value 100))))  ; Racket set
 (define hm  (draw tc (hashmaps (integers) (text))))
 (define t   (draw tc (tuples (integers) (text) (booleans))))  ; fixed-length list
 (define opt (draw tc (optional (integers))))                   ; #f or an integer

@@ -36,11 +36,13 @@
 ;;; Run test-cases draws from gen. Raises if any drawn value fails pred.
 ;;; Use this to assert that a generator only produces values satisfying a predicate.
 (define (assert-all-examples gen pred #:test-cases [test-cases 100])
+  ;; Use a fixed error message so Hypothesis treats all failures as the same
+  ;; interesting class. The failing value appears in the draw_N debug output.
   (run-hegel
    (lambda (tc)
      (define v (draw tc gen))
      (unless (pred v)
-       (error (format "Generated value ~v did not satisfy predicate" v))))
+       (error "assert-all-examples: generated value did not satisfy predicate")))
    #:test-cases test-cases))
 
 ;; ---------------------------------------------------------------------------
@@ -50,11 +52,13 @@
 ;;; Run test-cases draws from gen. Raises if any drawn value satisfies pred.
 ;;; Use this to assert that a generator never produces values satisfying a predicate.
 (define (assert-no-examples gen pred #:test-cases [test-cases 100])
+  ;; Use a fixed error message so Hypothesis treats all failures as the same
+  ;; interesting class. The failing value appears in the draw_N debug output.
   (run-hegel
    (lambda (tc)
      (define v (draw tc gen))
      (when (pred v)
-       (error (format "Generated value ~v should not satisfy predicate" v))))
+       (error "assert-no-examples: generated value should not satisfy predicate")))
    #:test-cases test-cases))
 
 ;; ---------------------------------------------------------------------------

@@ -25,6 +25,7 @@
 
  ;; Strings
  text
+ characters
  binary
 
  ;; Misc
@@ -35,6 +36,7 @@
 
  ;; Collections
  lists
+ sets
  tuples
  dicts
  hashmaps

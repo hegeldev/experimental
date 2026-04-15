@@ -28,10 +28,11 @@ just check       # coverage + lint + conformance (full gate)
 | `main.rkt` | Public re-export surface |
 | `generators/core.rkt` | `generator` struct, `make-basic-generator`, `generator-as-basic`, combinators |
 | `generators/numeric.rkt` | `integers`, `floats`, `booleans` |
-| `generators/strings.rkt` | `text`, `binary` |
+| `generators/strings.rkt` | `text`, `characters`, `binary` |
 | `generators/misc.rkt` | `just`, `sampled-from`, `one-of`, `optional` |
-| `generators/collections.rkt` | `lists`, `tuples`, `dicts`/`hashmaps` (basic + non-basic paths) |
-| `generators/format.rkt` | `emails`, `urls`, `domains`, `ipv4-addresses`, `ipv6-addresses`, `dates`, `times`, `datetimes`, `from-regex` |
+| `generators/collections.rkt` | `lists`, `sets`, `tuples`, `dicts`/`hashmaps` (basic + non-basic paths) |
+| `generators/format.rkt` | `emails`, `urls`, `domains`, `ipv4-addresses`, `ipv6-addresses`, `ip-addresses`, `dates`, `times`, `datetimes`, `from-regex` |
+| `test-utils.rkt` | `assert-all-examples`, `assert-no-examples`, `find-any`, `minimal` |
 
 ### Protocol
 
@@ -87,3 +88,8 @@ Use `reset-session-for-testing!` before/after mock server tests to avoid contami
 - The conformance binary `test_lists.rkt` reports `{size, min_element, max_element}` metrics for hegel-core 0.4.0; hegel-core 0.4.1 changed this to `{elements: [...]}`. The justfile pins 0.4.0.
 - `just conformance` uses `uv run --with 'hegel-core==0.4.0'`, which is a separate environment from the tooling venv (which has 0.4.1). Always use `just conformance` to test, not `python3 -m pytest` directly.
 - The Hypothesis example database is in `.hypothesis/`. Clear it with `rm -rf .hypothesis/examples/` if conformance tests get stuck on a cached failing example.
+- `ip-addresses` uses `one-of (ipv4-addresses) (ipv6-addresses)` — hegel-core has no `"ip_address"` schema type.
+- `from-regex` uses `"fullmatch"` key (not `"full_match"`) — the Hypothesis API key name.
+- `lists` with `#:unique #t` and a basic element generator uses the basic schema path (`"unique": true` in the schema); only non-basic elements use the collection protocol for uniqueness.
+- `sets` is `generator-map` of `lists(unique=#t)` and returns a Racket immutable set via `list->set`. Since `generator-map` on a basic generator preserves basicness, `sets (integers)` is basic.
+- After source changes, delete `compiled/` directories if you see `instantiate-linklet: mismatch` errors (stale bytecode).
