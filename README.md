@@ -299,11 +299,12 @@ Inside `run-hegel`, you receive a test case `tc` that you use to draw generated 
 ## Development
 
 ```bash
-just test        # run unit tests
+just test        # run unit tests (fast, no coverage)
 just coverage    # run tests + enforce 100% library coverage
 just lint        # check all files compile cleanly
+just format      # check all source files parse cleanly
 just conformance # run conformance tests against hegel-core 0.4.0
-just check       # test + lint + conformance
+just check       # coverage + lint + conformance (full gate)
 ```
 
 ## License

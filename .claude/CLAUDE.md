@@ -5,11 +5,12 @@ Hegel property-based testing library for Racket.
 ## Build commands
 
 ```bash
-just test        # run all unit tests (raco test tests/)
+just test        # run all unit tests (raco test tests/) — fast, no coverage
 just coverage    # raco cover + coverage-check.py (must be 100% library coverage)
 just lint        # raco make: check all files compile cleanly
+just format      # raco expand: check all source files parse cleanly
 just conformance # pytest against hegel-core==0.4.0 (uv run --with)
-just check       # test + lint + conformance
+just check       # coverage + lint + conformance (full gate)
 ```
 
 ## Architecture
