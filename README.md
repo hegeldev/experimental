@@ -66,7 +66,7 @@ void sortPreservesLength() {
     Hegel.test("sort preserves length", tc -> {
         List<Long> xs = tc.draw(lists(integers(-10, 10)));
         List<Long> sorted = badSort(xs);
-        assertEquals(xs.size(), sorted.size(),
+        assertTrue(xs.size() == sorted.size(),
             "Sort must not lose elements: " + xs + " -> " + sorted);
     });
 }
