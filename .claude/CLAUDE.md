@@ -93,3 +93,5 @@ Use `reset-session-for-testing!` before/after mock server tests to avoid contami
 - `lists` with `#:unique #t` and a basic element generator uses the basic schema path (`"unique": true` in the schema); only non-basic elements use the collection protocol for uniqueness.
 - `sets` is `generator-map` of `lists(unique=#t)` and returns a Racket immutable set via `list->set`. Since `generator-map` on a basic generator preserves basicness, `sets (integers)` is basic.
 - After source changes, delete `compiled/` directories if you see `instantiate-linklet: mismatch` errors (stale bytecode).
+- CBOR bignums (integers ≥ 2^64 or below -2^63) require `cbor-default-config` as the base for `hegel-cbor-config`. Using `cbor-empty-config` causes the library to return raw `cbor-tag` structs instead of Racket exact integers for large values.
+- In Racket, `#rx` does NOT support `{n}` quantifiers — those are PCRE-only. Use `#px` for patterns like `^[0-9]{4}-[0-9]{2}`. The `#rx` pattern silently returns `#f` instead of raising an error.

@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- **CBOR bignum decoding**: integers ≥ 2^64 (or below -2^63) now correctly return Racket exact integers. Previously they returned raw `cbor-tag` structs because the CBOR config lacked bignum tag handlers.
+- **`ip-addresses`**: no longer crashes with "Unsupported schema". hegel-core has no `"ip_address"` type; the generator now delegates to `one-of (ipv4-addresses) (ipv6-addresses)`.
+- **`from-regex`**: generated strings now actually match the full pattern. The schema key was `"full_match"` (ignored by hegel-core) instead of `"fullmatch"`.
+- **`lists` with `#:unique #t` and basic element**: now uses the server-side `"unique": true` schema key (efficient) instead of the collection protocol path.
+
+### New generators
+
+- `(characters ...)` — generate single-character strings, with the same constraints as `text`
+- `(sets elem-gen #:min-size ... #:max-size ...)` — generate Racket immutable sets with unique elements
+
+### Test utilities (new module `test-utils.rkt`)
+
+- `(assert-all-examples gen pred?)` — assert every generated value satisfies a predicate
+- `(assert-no-examples gen pred?)` — assert no generated value satisfies a predicate
+- `(find-any gen pred?)` — find any generated value satisfying a predicate
+- `(minimal gen pred?)` — find a generated value satisfying a predicate (shrunk to minimal)
+
 ## 0.1.0 - 2026-04-14
 
 Initial release of hegel-racket.
