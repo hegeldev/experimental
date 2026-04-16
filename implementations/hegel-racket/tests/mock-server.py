@@ -1,4 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#   "cbor2",
+#   "hegel-core==0.4.0",
+# ]
+# ///
 """
 Mock server for testing runner.rkt error paths.
 
@@ -14,9 +21,6 @@ Set MOCK_SERVER_MODE env var before running:
 import os
 import sys
 import cbor2
-
-# Add hegel-core to path
-sys.path.insert(0, '/home/dev/.local/share/uv/tools/hegel-core/lib/python3.13/site-packages')
 
 from hegel.protocol.connection import Connection
 

@@ -90,7 +90,7 @@
                       (environment-variables-copy (current-environment-variables))])
         ;; Set PATH to empty so find-executable-path cannot find uv
         (environment-variables-set! (current-environment-variables) #"PATH" #"")
-        ;; find-uv should still find /home/dev/.local/bin/uv via common-locations
+        ;; find-uv should still find ~/.local/bin/uv via common-locations
         (define result (find-uv))
         (check-pred string? result)
         ;; It should be the absolute path, not just "uv"

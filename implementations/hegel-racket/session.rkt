@@ -90,7 +90,7 @@
 ;; ---------------------------------------------------------------------------
 
 (define uv-common-locations
-  (list "/home/dev/.local/bin/uv"
+  (list (path->string (build-path (find-system-path 'home-dir) ".local" "bin" "uv"))
         "/usr/local/bin/uv"
         "/usr/bin/uv"))
 
