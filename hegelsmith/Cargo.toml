@@ -14,4 +14,4 @@ name = "hegelsmith"
 path = "src/main.rs"
 
 [dependencies]
-hegeltest = "0.2.1"
+hegeltest = "0.5.3"
