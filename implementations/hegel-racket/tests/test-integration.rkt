@@ -314,6 +314,27 @@
               (check-pred integer? x))
             #:test-cases 5)))))
 
+    (test-case "database uses 'unset default when not in CI"
+      ;; Covers the 'unset else-branch in (if (in-ci?) 'disabled 'unset).
+      ;; In CI, (in-ci?) is always true so 'unset is never the default.
+      ;; Clear all CI detection variables so (in-ci?) returns #f.
+      (check-not-exn
+       (lambda ()
+         (parameterize ([current-environment-variables
+                         (environment-variables-copy (current-environment-variables))])
+           (for ([v '("CI" "BITBUCKET_COMMIT" "BUILDKITE" "CIRCLECI" "CIRRUS_CI"
+                      "CODEBUILD_BUILD_ID" "GITHUB_ACTIONS" "GITLAB_CI"
+                      "HEROKU_TEST_RUN_ID" "TEAMCITY_VERSION" "TF_BUILD")])
+             (environment-variables-set! (current-environment-variables)
+                                         (string->bytes/utf-8 v) #f))
+           ;; No #:database - default (if (in-ci?) 'disabled 'unset) now gives 'unset
+           (run-hegel
+            (lambda (tc)
+              (define x (draw tc (integers #:min-value 0 #:max-value 100)))
+              (check-pred integer? x))
+            #:test-cases 5
+            #:seed 42)))))
+
     (test-case "database disabled option works"
       ;; Covers (eq? database 'disabled) path in run-hegel
       (check-not-exn

@@ -84,17 +84,24 @@
       (check-pred string? result))
 
     (test-case "finds uv via common-locations when not on PATH"
-      ;; Covers the (for/or ... common-locations) fallback path in find-uv
-      ;; by removing uv's directory from PATH so find-executable-path returns #f.
-      (parameterize ([current-environment-variables
-                      (environment-variables-copy (current-environment-variables))])
-        ;; Set PATH to empty so find-executable-path cannot find uv
-        (environment-variables-set! (current-environment-variables) #"PATH" #"")
-        ;; find-uv should still find /home/dev/.local/bin/uv via common-locations
-        (define result (find-uv))
-        (check-pred string? result)
-        ;; It should be the absolute path, not just "uv"
-        (check-true (> (string-length result) 2))))
+      ;; Covers the (for/or ... common-locations) fallback path in find-uv.
+      ;; Creates a temporary file to serve as a fake uv at a known location,
+      ;; so the test doesn't depend on where uv is actually installed.
+      (define fake-uv (make-temporary-file "uv~a"))
+      (dynamic-wind
+        void
+        (lambda ()
+          (parameterize ([current-environment-variables
+                          (environment-variables-copy (current-environment-variables))])
+            ;; Set PATH to empty so find-executable-path cannot find uv
+            (environment-variables-set! (current-environment-variables) #"PATH" #"")
+            ;; Pass our fake location to exercise the (for/or) fallback branch
+            (define result (find-uv (list (path->string fake-uv))))
+            (check-pred string? result)
+            ;; It should be the absolute path, not just "uv"
+            (check-true (> (string-length result) 2))))
+        (lambda ()
+          (when (file-exists? fake-uv) (delete-file fake-uv)))))
 
     (test-case "falls back to \"uv\" string when PATH is empty and no common locations exist"
       ;; Covers the \"uv\" fallback string in find-uv when all locations fail
@@ -137,9 +144,12 @@
       (define mock-server-script (make-temporary-file "mock-server-~a.py"))
       (display-to-file
        (string-append
-        "#!/usr/bin/env python3\n"
+        "#!/usr/bin/env -S uv run\n"
+        "# /// script\n"
+        "# requires-python = \">=3.9\"\n"
+        "# dependencies = [\"hegel-core==0.4.0\"]\n"
+        "# ///\n"
         "import sys\n"
-        "sys.path.insert(0, '/home/dev/.local/share/uv/tools/hegel-core/lib/python3.13/site-packages')\n"
         "from hegel.protocol.connection import Connection\n"
         "class StdioTransport:\n"
         "    def recv(self, n):\n"
@@ -171,9 +181,12 @@
       (define mock-server-script (make-temporary-file "mock-server-~a.py"))
       (display-to-file
        (string-append
-        "#!/usr/bin/env python3\n"
+        "#!/usr/bin/env -S uv run\n"
+        "# /// script\n"
+        "# requires-python = \">=3.9\"\n"
+        "# dependencies = [\"hegel-core==0.4.0\"]\n"
+        "# ///\n"
         "import sys\n"
-        "sys.path.insert(0, '/home/dev/.local/share/uv/tools/hegel-core/lib/python3.13/site-packages')\n"
         "from hegel.protocol.connection import Connection\n"
         "class StdioTransport:\n"
         "    def recv(self, n):\n"
@@ -206,9 +219,12 @@
       (define mock-server-script (make-temporary-file "mock-server-~a.py"))
       (display-to-file
        (string-append
-        "#!/usr/bin/env python3\n"
+        "#!/usr/bin/env -S uv run\n"
+        "# /// script\n"
+        "# requires-python = \">=3.9\"\n"
+        "# dependencies = [\"hegel-core==0.4.0\"]\n"
+        "# ///\n"
         "import sys, time\n"
-        "sys.path.insert(0, '/home/dev/.local/share/uv/tools/hegel-core/lib/python3.13/site-packages')\n"
         "from hegel.protocol.connection import Connection\n"
         "class StdioTransport:\n"
         "    def recv(self, n):\n"

@@ -1,0 +1,66 @@
+name: hegel-perl CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'implementations/hegel-perl/**'
+      - '.github/workflows/ci-perl.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'implementations/hegel-perl/**'
+      - '.github/workflows/ci-perl.yml'
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: implementations/hegel-perl
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install cpanminus
+        run: sudo apt-get update && sudo apt-get install -y cpanminus just
+
+      - name: Install Perl dependencies
+        run: cpanm --notest CBOR::XS String::CRC32 Types::Serialiser Test::Exception
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Run tests and lint
+        run: just test && just lint
+
+  conformance:
+    name: conformance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install cpanminus
+        run: sudo apt-get update && sudo apt-get install -y cpanminus just
+
+      - name: Install Perl dependencies
+        run: cpanm --notest CBOR::XS String::CRC32 Types::Serialiser
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Run conformance tests
+        run: just conformance
