@@ -1,0 +1,38 @@
+# List available recipes
+default:
+    @just --list
+
+# Run all checks (test, clippy, fmt)
+check: test clippy fmt-check
+
+# Run tests
+test:
+    cargo test
+
+# Run clippy lints
+clippy:
+    cargo clippy -- -D warnings
+
+# Check formatting
+fmt-check:
+    cargo fmt --check
+
+# Apply formatting
+fmt:
+    cargo fmt
+
+# Build in debug mode
+build:
+    cargo build
+
+# Build in release mode
+build-release:
+    cargo build --release
+
+# Generate and print a single test program
+print-one seed="0":
+    cargo run -- --print-only --test-cases 1 --seed {{ seed }}
+
+# Generate and print multiple test programs
+print count="10":
+    cargo run -- --print-only --test-cases {{ count }}

@@ -1,0 +1,17 @@
+[package]
+name = "hegelsmith"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.86"
+publish = false
+
+[lib]
+name = "hegelsmith"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hegelsmith"
+path = "src/main.rs"
+
+[dependencies]
+hegeltest = "0.2.1"

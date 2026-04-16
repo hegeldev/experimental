@@ -1,0 +1,6 @@
+/target
+/examples
+/compile_err.txt
+/stdout.txt
+/stderr.txt
+/.hegel
