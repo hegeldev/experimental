@@ -101,6 +101,16 @@
       (check-pred string? (unbox origin-box))
       (check-true (> (string-length (unbox origin-box)) 0)))
 
+    (test-case "interesting on final run eprints error message"
+      ;; Covers (when is-final? (eprintf ...)) in the exn:fail? handler
+      (define-values (ds status-box origin-box _) (make-mock-ds #:values '(5)))
+      (define result (run-test-case ds
+                                    (lambda (tc)
+                                      (error "final test failed!"))
+                                    #t))  ; is-final? = #t
+      (check-pred pair? result)
+      (check-equal? (car result) 'interesting))
+
     (test-case "origin-from-error with no source location uses format error: msg"
       ;; Covers (format "error: ~a" msg) in origin-from-error when ctx is empty.
       ;; Pass an empty ctx override to simulate no source location.
