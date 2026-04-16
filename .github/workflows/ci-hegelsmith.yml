@@ -1,0 +1,94 @@
+name: hegelsmith CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hegelsmith/**'
+      - '.github/workflows/ci-hegelsmith.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'hegelsmith/**'
+      - '.github/workflows/ci-hegelsmith.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: hegelsmith
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.86"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "hegelsmith -> target"
+      - run: cargo check
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.86"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "hegelsmith -> target"
+      - run: cargo test
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.86"
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "hegelsmith -> target"
+      - run: cargo clippy -- -D warnings
+
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.86"
+          components: rustfmt
+      - run: cargo fmt --check

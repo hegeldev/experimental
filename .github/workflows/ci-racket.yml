@@ -1,0 +1,76 @@
+name: hegel-racket CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'implementations/hegel-racket/**'
+      - '.github/workflows/ci-racket.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'implementations/hegel-racket/**'
+      - '.github/workflows/ci-racket.yml'
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: implementations/hegel-racket
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Racket
+        uses: Bogdanp/setup-racket@v1.11
+        with:
+          version: stable
+
+      - name: Install Racket package dependencies
+        run: raco pkg install --auto --no-docs cbor
+
+      - name: Install just
+        run: sudo apt-get update && sudo apt-get install -y just
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Run check (coverage + lint + conformance)
+        run: just check
+
+  conformance:
+    name: conformance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Racket
+        uses: Bogdanp/setup-racket@v1.11
+        with:
+          version: stable
+
+      - name: Install Racket package dependencies
+        run: raco pkg install --auto --no-docs cbor
+
+      - name: Install just
+        run: sudo apt-get update && sudo apt-get install -y just
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Run conformance tests
+        run: just conformance
