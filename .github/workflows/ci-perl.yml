@@ -39,6 +39,8 @@ jobs:
       - name: Install Perl dependencies
         run: cpanm --notest CBOR::XS String::CRC32 Types::Serialiser Test::Exception
 
+      - uses: astral-sh/setup-uv@v6
+
       - name: Run tests and lint
         run: just test && just lint
 
